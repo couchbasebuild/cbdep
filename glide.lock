@@ -1,0 +1,85 @@
+hash: 312929cf0d82fd6d97fb423d411674ba1a3f2f2e88a405aa5fdb6dee6fbbade5
+updated: 2018-08-13T03:38:12.37455695-07:00
+imports:
+- name: github.com/aws/aws-sdk-go
+  version: 3c6470de8dadcb7b069981a8a084ffface365c36
+  subpackages:
+  - aws
+  - aws/awserr
+  - aws/awsutil
+  - aws/client
+  - aws/client/metadata
+  - aws/corehandlers
+  - aws/credentials
+  - aws/credentials/ec2rolecreds
+  - aws/credentials/endpointcreds
+  - aws/credentials/stscreds
+  - aws/csm
+  - aws/defaults
+  - aws/ec2metadata
+  - aws/endpoints
+  - aws/request
+  - aws/session
+  - aws/signer/v4
+  - internal/sdkio
+  - internal/sdkrand
+  - internal/sdkuri
+  - internal/shareddefaults
+  - private/protocol
+  - private/protocol/eventstream
+  - private/protocol/eventstream/eventstreamapi
+  - private/protocol/query
+  - private/protocol/query/queryutil
+  - private/protocol/rest
+  - private/protocol/restxml
+  - private/protocol/xml/xmlutil
+  - service/s3
+  - service/sts
+- name: github.com/bgentry/go-netrc
+  version: 9fd32a8b3d3d3f9d43c341bfe098430e07609480
+  subpackages:
+  - netrc
+- name: github.com/codeclysm/extract
+  version: d489ebb956c95f16e9435028ee81b332628a3aa6
+- name: github.com/go-ini/ini
+  version: d58d458bec3cb5adec4b7ddb41131855eac0b33f
+- name: github.com/hashicorp/go-cleanhttp
+  version: d5fe4b57a186c716b0e00b8c301cbd9b4182694d
+- name: github.com/hashicorp/go-getter
+  version: 4bda8fa99001c61db3cad96b421d4c12a81f256d
+  subpackages:
+  - helper/url
+- name: github.com/hashicorp/go-safetemp
+  version: b1a1dbde6fdc11e3ae79efd9039009e22d4ae240
+- name: github.com/hashicorp/go-version
+  version: 270f2f71b1ee587f3b609f00f422b76a6b28f348
+- name: github.com/jawher/mow.cli
+  version: 123c8a60ff2f69b8c55b3e19b1383233321b316f
+  subpackages:
+  - internal/container
+  - internal/flow
+  - internal/fsm
+  - internal/lexer
+  - internal/matcher
+  - internal/parser
+  - internal/values
+- name: github.com/jmespath/go-jmespath
+  version: c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5
+- name: github.com/juju/errors
+  version: 22422dad46e14561a0854ad42497a75af9b61909
+- name: github.com/mitchellh/go-homedir
+  version: 58046073cbffe2f25d425fe1331102f55cf719de
+- name: github.com/mitchellh/go-testing-interface
+  version: a61a99592b77c9ba629d254a693acffaeb4b7e28
+- name: github.com/ulikunitz/xz
+  version: 636d36a76670e6c700f22fd5f4588679ff2896c4
+  subpackages:
+  - internal/hash
+  - internal/xlog
+  - lzma
+- name: gopkg.in/h2non/filetype.v1
+  version: cc14fdc9ca0e4c2bafad7458f6ff79fd3947cfbb
+  subpackages:
+  - matchers
+  - types
+testImports: []
