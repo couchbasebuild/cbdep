@@ -18,9 +18,8 @@ func init() {
 	RootApp.Command("install", "Install", func(cmd *cli.Cmd) {
 		pkg := cmd.StringArg("PACKAGE", "", "Package to install")
 		ver := cmd.StringArg("VERSION", "", "Version to install")
-		// QQQ default should be platform-specific
-		dir := cmd.StringOpt("dir d", "/opt/cbdeps", "Directory to unpack into (not applicable for all packages)")
-		platform := cmd.StringOpt("platform p", "", "Local platform / distribution for downloading")
+		dir := cmd.StringOpt("dir d", cbdep.DefaultInstallDir, "Directory to unpack into (not applicable for all packages)")
+		platform := cmd.StringOpt("platform p", cbdep.Platform, "Local platform / distribution for downloading")
 		cmd.Action = func() {
 			var doFunc func(string, string, string) error
 			switch *pkg {
@@ -44,12 +43,19 @@ func init() {
 
 // QQQ obviously this logic shouldn't be hardcoded
 func doGolang(ver string, platform string, dir string) error {
-	url := fmt.Sprintf("https://dl.google.com/go/go%s.linux-amd64.tar.gz", ver)
+	var ext string
+	switch platform {
+	case "windows":
+		ext = "zip"
+	default:
+		ext = "tar.gz"
+	}
+	url := fmt.Sprintf("https://dl.google.com/go/go%s.%s-amd64.%s", ver, cbdep.Platform, ext)
 	return doPackage("golang", ver, url, dir)
 }
 
 func doPython(ver string, platform string, dir string) error {
-	// Error check - Linux-specific
+	// Error check - QQQ Linux-specific
 	if dir != "/opt/cbdeps" {
 		return errors.New("Python can only be installed in /opt/cbdeps")
 	}

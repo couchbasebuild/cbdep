@@ -14,8 +14,9 @@ var (
 	cacheDir = filepath.Join(os.Getenv("HOME"), ".cbdepcache")
 )
 
+// CacheEntry represents a locally-cached download
 type CacheEntry struct {
-	Url      string
+	URL      string
 	Filename string
 }
 
@@ -25,10 +26,11 @@ func getFilename(url string) string {
 	return filepath.Join(cacheDir, md5[0:2], md5, path.Base(url))
 }
 
+// Cache downloads a file from `url` if necessary
 func Cache(url string) (*CacheEntry, error) {
 	filename := getFilename(url)
 	newEntry := &CacheEntry{
-		Url:      url,
+		URL:      url,
 		Filename: filename,
 	}
 
