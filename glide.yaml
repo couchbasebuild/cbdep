@@ -1,5 +1,0 @@
-package: github.com/couchbase/cbdep
-import:
-- package: github.com/hashicorp/go-getter
-- package: github.com/codeclysm/extract
-  version: v1.1.1
