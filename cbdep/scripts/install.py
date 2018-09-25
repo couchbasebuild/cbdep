@@ -24,11 +24,20 @@ class Installer:
             self.descriptor = yaml.load(y)
         self.cache = cache
         self.platforms = platforms
+
+        # Populated by self.install
+        self.package = None
+        self.version = None
         # Populated by do_downloads to be the final single downloaded installer
         self.installer_file = None
         # Populated by do_downloads to be the platform-specific YAML entry for
         # the downloaded file
         self.plat_directives = None
+        # Also populated by do_downloads since it's the one that figures out the
+        # specific platform name being used
+        self.platform = None
+        # Populate by set_installdir
+        self.installdir = None
 
     @staticmethod
     def get_by_key(objects, key, value, any=False):
@@ -51,16 +60,22 @@ class Installer:
         """
         Entry point to install a named package
         """
+        # QQQ This lack of encapsulation is wrong. Split into better objects.
+        self.package = package
+        self.version = version
+
         pkg = self.get_by_key(self.descriptor["packages"], "name", package)
         if pkg is None:
             logger.error(f"Unknown package: {package}")
             sys.exit(1)
         if "downloads" in pkg:
-            self.do_downloads(pkg["downloads"], package, version)
+            self.do_downloads(pkg["downloads"])
+            self.set_installdir(dir)
+
             if "exec" in self.plat_directives:
-                self.exec(dir)
+                self.exec()
             else:
-                self.unarchive(dir)
+                self.unarchive()
 
     def scrape_html(self, localfile, regexp):
         """
@@ -81,25 +96,27 @@ class Installer:
         logger.error("Scraped HTML did not find {regexp}")
         sys.exit(1)
 
-    def do_downloads(self, downloads, package, version):
+    def do_downloads(self, downloads):
         """
         Handles a downloads directive
         """
         platforms = self.platforms if isinstance(self.platforms, list) else [ self.platforms ]
         for platform in platforms:
-            logger.debug(f"Looking for {package} on {platform}...")
+            logger.debug(f"Looking for {self.package} on {platform}...")
             plat = self.get_by_key(downloads, "platform", platform)
             if plat is not None:
                 break
 
         if plat is None:
-            logger.error(f"Package {package} not available on any of {platforms}")
+            logger.error(f"Package {self.package} not available on any of {platforms}")
             sys.exit(1)
 
         self.plat_directives = plat
+        self.platform = platform
 
         template = string.Template(plat["url"])
-        url = template.substitute(VERSION=version, PLATFORM=platform)
+        # QQQ See other comments about template substitution
+        url = template.substitute(VERSION=self.version, PLATFORM=self.platform)
         localfile = str(self.cache.get(url))
 
         # Handle strange redirects
@@ -108,26 +125,38 @@ class Installer:
 
         self.installer_file = localfile
 
-    def execute(self, dir):
+    def set_installdir(self, dir):
+        """
+        Logic for determining final installation directory
+        """
+
+        self.installdir = self.plat_directives.get("override_dir", dir)
+        if self.installdir != dir:
+            logger.info(f"NOTE: overriding installation directory to {self.installdir}")
+
+        if "add_dir" in self.plat_directives:
+            template = string.Template(self.plat_directives["add_dir"])
+            # QQQ split template substitution out to separate place, to ensure
+            # common set of variables are available everywhere reasonable
+            new_dir = pathlib.Path(self.installdir) / template.substitute(
+                VERSION=self.version, PLATFORM=self.platform
+            )
+            os.makedirs(new_dir, exist_ok=True)
+            self.installdir = str(new_dir)
+
+
+    def execute(self):
         """
         Runs a downloaded executable installer, ideally installing into
         specified dir
         """
         pass
 
-    def unarchive(self, dir):
+
+    def unarchive(self):
         """
         Unarchives the downloaded file
         """
-        installdir = self.plat_directives.get("override_dir", dir)
-        if installdir != dir:
-            logger.info(f"NOTE: overriding installation directory to {installdir}")
 
-        if "add_dir" in self.plat_directives:
-            template = string.Template(self.plat_directives["add_dir"])
-            new_dir = pathlib.Path(installdir) / template.substitute(VERSION=version, PLATFORM=platform)
-            os.makedirs(new_dir, exist_ok=True)
-            installdir = str(new_dir)
-
-        logger.info(f"Unpacking archive into {installdir}")
-        shutil.unpack_archive(self.installer_file, installdir)
+        logger.info(f"Unpacking archive into {self.installdir}")
+        shutil.unpack_archive(self.installer_file, self.installdir)

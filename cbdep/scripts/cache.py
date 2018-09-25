@@ -76,12 +76,14 @@ class Cache:
                 with open(cachefile, 'wb') as fd:
                     for chunk in r.iter_content(chunk_size=1024):
                         fd.write(chunk)
-                with open(cachedir / "filename", 'w') as f:
+                with open(cachefilename, 'w') as f:
                     f.write(filename)
 
             except:
-                os.unlink(cachefile)
-                os.unlink(cachefilename)
+                if cachefile.exists():
+                    os.unlink(cachefile)
+                if cachefilename.exists():
+                    os.unlink(cachefilename)
                 raise
 
         logger.debug("Downloaded file")
