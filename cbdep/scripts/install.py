@@ -9,7 +9,10 @@ import re
 import shutil
 import string
 import sys
+import tempfile
 import yaml
+
+from subprocess import run
 
 logger = logging.getLogger("cbdep")
 
@@ -72,8 +75,8 @@ class Installer:
             self.do_downloads(pkg["downloads"])
             self.set_installdir(dir)
 
-            if "exec" in self.plat_directives:
-                self.exec()
+            if "install" in self.plat_directives:
+                self.execute()
             else:
                 self.unarchive()
 
@@ -134,6 +137,13 @@ class Installer:
         if self.installdir != dir:
             logger.info(f"NOTE: overriding installation directory to {self.installdir}")
 
+        # Make install dir absolute
+        # QQQ Should use .resolve() rather than .absolute() since the latter
+        # is semi-documented and semi-deprecated. However .resolve() doesn't
+        # actually work as documented on Windows (doesn't return an absolute
+        # path), where .absolute() does. So...
+        self.installdir = str(pathlib.Path(self.installdir).absolute())
+
         if "add_dir" in self.plat_directives:
             template = string.Template(self.plat_directives["add_dir"])
             # QQQ split template substitution out to separate place, to ensure
@@ -144,13 +154,34 @@ class Installer:
             os.makedirs(new_dir, exist_ok=True)
             self.installdir = str(new_dir)
 
-
     def execute(self):
         """
-        Runs a downloaded executable installer, ideally installing into
-        specified dir
+        Runs a downloaded executable installer, installs into target dir,
+        makes copy of target dir, uninstalls from target dir, then copies the
+        copy-dir to target dir
         """
-        pass
+
+        logger.info(f"Installing into {self.installdir}")
+        shutil.rmtree(self.installdir, ignore_errors=True)
+        template = string.Template(self.plat_directives["install"])
+        cmd = template.substitute(DL=self.installer_file, INSTALLDIR=self.installdir)
+        logger.debug(f"Install command: {cmd}")
+        run(cmd, shell=True, check=True)
+
+        logger.info(f"Copying {self.installdir} to backup copy")
+        backupdir = self.installdir + "pyfred"
+        shutil.copytree(self.installdir, backupdir)
+
+        logger.info(f"Uninstalling from {self.installdir}")
+        template = string.Template(self.plat_directives["uninstall"])
+        cmd = template.substitute(DL=self.installer_file)
+        logger.debug(f"Uninstall command: {cmd}")
+        run(cmd, shell=True, check=True)
+
+        logger.info(f"Copying backup copy to {self.installdir}")
+        shutil.copytree(backupdir, self.installdir)
+        logger.info(f"Removing backup copy")
+        shutil.rmtree(backupdir)
 
 
     def unarchive(self):
