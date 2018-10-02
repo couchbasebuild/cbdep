@@ -39,5 +39,6 @@ def get_platforms():
     elif system == "darwin":
         platforms.insert(0, "macosx")
         platforms.insert(0, "macos")
+        platforms.insert(0, "mac")
 
     return platforms
