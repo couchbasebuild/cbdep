@@ -28,6 +28,9 @@ class Installer:
         self.cache = cache
         self.platforms = platforms
 
+        # Things that will be substituted in all templates
+        self.symbols = {}
+
         # Populated by self.install
         self.package = None
         self.version = None
@@ -63,9 +66,10 @@ class Installer:
         """
         Entry point to install a named package
         """
-        # QQQ This lack of encapsulation is wrong. Split into better objects.
         self.package = package
+        self.symbols['PACKAGE'] = package
         self.version = version
+        self.symbols['VERSION'] = version
 
         pkg = self.get_by_key(self.descriptor["packages"], "name", package)
         if pkg is None:
@@ -116,10 +120,10 @@ class Installer:
 
         self.plat_directives = plat
         self.platform = platform
+        self.symbols['PLATFORM'] = platform
 
         template = string.Template(plat["url"])
-        # QQQ See other comments about template substitution
-        url = template.substitute(VERSION=self.version, PLATFORM=self.platform)
+        url = template.substitute(**self.symbols)
         localfile = str(self.cache.get(url))
 
         # Handle strange redirects
@@ -127,32 +131,29 @@ class Installer:
             localfile = self.scrape_html(localfile, plat["scrape_html"])
 
         self.installer_file = localfile
+        self.symbols['DL'] = localfile
 
     def set_installdir(self, dir):
         """
         Logic for determining final installation directory
         """
 
-        self.installdir = self.plat_directives.get("override_dir", dir)
-        if self.installdir != dir:
-            logger.info(f"NOTE: overriding installation directory to {self.installdir}")
-
         # Make install dir absolute
         # QQQ Should use .resolve() rather than .absolute() since the latter
         # is semi-documented and semi-deprecated. However .resolve() doesn't
         # actually work as documented on Windows (doesn't return an absolute
         # path), where .absolute() does. So...
-        self.installdir = str(pathlib.Path(self.installdir).absolute())
+        self.installdir = str(pathlib.Path(dir).absolute())
 
         if "add_dir" in self.plat_directives:
             template = string.Template(self.plat_directives["add_dir"])
-            # QQQ split template substitution out to separate place, to ensure
-            # common set of variables are available everywhere reasonable
             new_dir = pathlib.Path(self.installdir) / template.substitute(
-                VERSION=self.version, PLATFORM=self.platform
+                **self.symbols
             )
             os.makedirs(new_dir, exist_ok=True)
             self.installdir = str(new_dir)
+
+        self.symbols['INSTALLDIR'] = self.installdir
 
     def execute(self):
         """
@@ -164,7 +165,7 @@ class Installer:
         logger.info(f"Installing into {self.installdir}")
         shutil.rmtree(self.installdir, ignore_errors=True)
         template = string.Template(self.plat_directives["install"])
-        cmd = template.substitute(DL=self.installer_file, INSTALLDIR=self.installdir)
+        cmd = template.substitute(**self.symbols)
         logger.debug(f"Install command: {cmd}")
         run(cmd, shell=True, check=True)
 
@@ -174,7 +175,7 @@ class Installer:
 
         logger.info(f"Uninstalling from {self.installdir}")
         template = string.Template(self.plat_directives["uninstall"])
-        cmd = template.substitute(DL=self.installer_file)
+        cmd = template.substitute(**self.symbols)
         logger.debug(f"Uninstall command: {cmd}")
         run(cmd, shell=True, check=True)
 
