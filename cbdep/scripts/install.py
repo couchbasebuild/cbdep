@@ -30,37 +30,15 @@ class Installer:
 
         # Things that will be substituted in all templates
         self.symbols = {}
+        self.symbols["HOME"] = str(pathlib.Path.home())
 
-        # Populated by self.install
+        # Populated by install()
         self.package = None
         self.version = None
-        # Populated by do_downloads to be the final single downloaded installer
-        self.installer_file = None
-        # Populated by do_downloads to be the platform-specific YAML entry for
-        # the downloaded file
-        self.plat_directives = None
-        # Also populated by do_downloads since it's the one that figures out the
-        # specific platform name being used
-        self.platform = None
-        # Populate by set_installdir
         self.installdir = None
 
-    @staticmethod
-    def get_by_key(objects, key, value, any=False):
-        """
-        Given a list of objects, returns the first object with a key 'key'
-        whose value is either 'value' or a list containing 'value'.
-        """
-        for obj in objects:
-            if key not in obj:
-                continue
-            if isinstance(obj[key], list):
-                if value in obj[key]:
-                    return obj
-            else:
-                if obj[key] == value:
-                    return obj
-        return None
+        # Populated by do_url() to be the final single downloaded installer
+        self.installer_file = None
 
     def install(self, package, version, dir):
         """
@@ -71,18 +49,130 @@ class Installer:
         self.version = version
         self.symbols['VERSION'] = version
 
-        pkg = self.get_by_key(self.descriptor["packages"], "name", package)
-        if pkg is None:
+        # Make install dir absolute
+        # QQQ Should use .resolve() rather than .absolute() since the latter
+        # is semi-documented and semi-deprecated. However .resolve() doesn't
+        # actually work as documented on Windows (doesn't return an absolute
+        # path), where .absolute() does. So...
+        self.installdir = str(pathlib.Path(dir).absolute())
+        self.symbols['INSTALL_DIR'] = self.installdir
+
+        pkgs = self.descriptor.get("packages")
+        if pkgs is None:
+            logger.error("Malformed configuration file (missing 'packages')")
+            sys.exit(1)
+
+        blocks = pkgs.get(package)
+        if blocks is None:
             logger.error(f"Unknown package: {package}")
             sys.exit(1)
-        if "downloads" in pkg:
-            self.do_downloads(pkg["downloads"])
-            self.set_installdir(dir)
 
-            if "install" in self.plat_directives:
-                self.execute()
+        logger.debug(f"Starting install for package {package}")
+
+        block = self.find_block(blocks)
+        if block is None:
+            logger.error(f"No blocks for package {package} are appropriate for current system")
+            sys.exit(1)
+
+        self.execute_block(block)
+
+    def find_block(self, blocks):
+        """
+        Searches for first block (dictionary) in the list "blocks" which
+        is appropriate for the current system, based on its if_platform,
+        if_version, etc. keys
+        Returns: Said block, or None if none match
+        """
+
+        for block in blocks:
+            if self.match_platform(block) and self.match_version(block):
+                return block
+
+        return None
+
+    def match_platform(self, block):
+        """
+        If the block contains an if_platform key, return true if the current
+        platform is one of the values for that key, else false.
+        If the block does not contain an if_platform key, return true
+        """
+        if "if_platform" not in block:
+            return True
+
+        if_platform = block["if_platform"]
+        if isinstance(self.platforms, list):
+            local_platforms = self.platforms
+        else:
+            local_platforms = [ self.platforms ]
+
+        matched_platform = False
+        for local_platform in local_platforms:
+            if isinstance(if_platform, list):
+                if local_platform in if_platform:
+                    matched_platform = True
+                    break
             else:
-                self.unarchive()
+                if if_platform == local_platform:
+                    matched_platform = True
+                    break
+
+        if matched_platform:
+            self.symbols['PLATFORM'] = local_platform
+            logger.debug(f"Identified platform {local_platform}")
+            return True
+
+        return False
+
+    def match_version(self, block):
+        """
+        If the block contains an if_version key, return true if the current
+        version matches the value expression, else false.
+        If the block does not contain an if_version key, return true
+        """
+        if "if_version" not in block:
+            return True
+
+        if_version = block["if_version"]
+        # QQQ
+        return True
+
+    def execute_block(self, block):
+        """
+        Given a single block from the config, execute all actions
+        sequentially
+        """
+        actions = block.get("actions")
+        if actions is None:
+            logger.error("Malformed configuration file (missing 'actions')")
+            sys.exit(1)
+
+        for action in actions:
+
+            # Special option "fixed_dir" may cause action to be skipped
+            if "fixed_dir" in action:
+                if self.handle_fixed_dir(action):
+                    continue
+
+            if "url" in action:
+                self.do_url(action)
+            elif "unarchive" in action:
+                self.do_unarchive(action)
+            elif "run" in action:
+                self.do_run(action)
+            else:
+                logger.error("Malformed configuration file (missing action directive)")
+                sys.exit(1)
+
+    def handle_fixed_dir(self, action):
+        """
+        Handler for 'fixed_dir' option. If this references a directory that
+        already exists, presume this action has been completed previously.
+        """
+
+        fixed_dir = self.templatize(action["fixed_dir"])
+        self.symbols["FIXED_DIR"] = fixed_dir
+
+        return pathlib.Path(fixed_dir).exists()
 
     def scrape_html(self, localfile, regexp):
         """
@@ -103,92 +193,60 @@ class Installer:
         logger.error("Scraped HTML did not find {regexp}")
         sys.exit(1)
 
-    def do_downloads(self, downloads):
+    def do_url(self, action):
         """
-        Handles a downloads directive
+        Handles a 'url' directive
         """
-        platforms = self.platforms if isinstance(self.platforms, list) else [ self.platforms ]
-        for platform in platforms:
-            logger.debug(f"Looking for {self.package} on {platform}...")
-            plat = self.get_by_key(downloads, "platform", platform)
-            if plat is not None:
-                break
 
-        if plat is None:
-            logger.error(f"Package {self.package} not available on any of {platforms}")
-            sys.exit(1)
-
-        self.plat_directives = plat
-        self.platform = platform
-        self.symbols['PLATFORM'] = platform
-
-        template = string.Template(plat["url"])
+        template = string.Template(action["url"])
         url = template.substitute(**self.symbols)
         localfile = str(self.cache.get(url))
 
         # Handle strange redirects
-        if "scrape_html" in plat:
-            localfile = self.scrape_html(localfile, plat["scrape_html"])
+        if "scrape_html" in action:
+            localfile = self.scrape_html(localfile, action["scrape_html"])
 
+        # Remember the downloaded file
         self.installer_file = localfile
         self.symbols['DL'] = localfile
 
-    def set_installdir(self, dir):
-        """
-        Logic for determining final installation directory
-        """
-
-        # Make install dir absolute
-        # QQQ Should use .resolve() rather than .absolute() since the latter
-        # is semi-documented and semi-deprecated. However .resolve() doesn't
-        # actually work as documented on Windows (doesn't return an absolute
-        # path), where .absolute() does. So...
-        self.installdir = str(pathlib.Path(dir).absolute())
-
-        if "add_dir" in self.plat_directives:
-            template = string.Template(self.plat_directives["add_dir"])
-            new_dir = pathlib.Path(self.installdir) / template.substitute(
-                **self.symbols
-            )
-            os.makedirs(new_dir, exist_ok=True)
-            self.installdir = str(new_dir)
-
-        self.symbols['INSTALLDIR'] = self.installdir
-
-    def execute(self):
-        """
-        Runs a downloaded executable installer, installs into target dir,
-        makes copy of target dir, uninstalls from target dir, then copies the
-        copy-dir to target dir
-        """
-
-        logger.info(f"Installing into {self.installdir}")
-        shutil.rmtree(self.installdir, ignore_errors=True)
-        template = string.Template(self.plat_directives["install"])
-        cmd = template.substitute(**self.symbols)
-        logger.debug(f"Install command: {cmd}")
-        run(cmd, shell=True, check=True)
-
-        logger.info(f"Copying {self.installdir} to backup copy")
-        backupdir = self.installdir + "pyfred"
-        shutil.copytree(self.installdir, backupdir)
-
-        logger.info(f"Uninstalling from {self.installdir}")
-        template = string.Template(self.plat_directives["uninstall"])
-        cmd = template.substitute(**self.symbols)
-        logger.debug(f"Uninstall command: {cmd}")
-        run(cmd, shell=True, check=True)
-
-        logger.info(f"Copying backup copy to {self.installdir}")
-        shutil.copytree(backupdir, self.installdir)
-        logger.info(f"Removing backup copy")
-        shutil.rmtree(backupdir)
-
-
-    def unarchive(self):
+    def do_unarchive(self, action):
         """
         Unarchives the downloaded file
         """
 
-        logger.info(f"Unpacking archive into {self.installdir}")
-        shutil.unpack_archive(self.installer_file, self.installdir)
+        unarchive_dir = self.installdir
+
+        if "add_dir" in action:
+            new_dir = pathlib.Path(self.installdir) / self.templatize(action["add_dir"])
+            os.makedirs(new_dir, exist_ok=True)
+            unarchive_dir = str(new_dir)
+
+        logger.info(f"Unpacking archive into {unarchive_dir}")
+        shutil.unpack_archive(self.installer_file, unarchive_dir)
+
+    def do_run(self, action):
+        """
+        Runs a sequence of local commands from a 'run' directive
+        """
+
+        command_string = self.templatize(action["run"])
+        environment = os.environ.copy()
+
+        # PyInstaller binaries get LD_LIBRARY_PATH set for them, and that
+        # can have unwanted side-effects for our own subprocesses. Remove
+        # that here - it can still be set by an env: entry in cbdep.config.
+        environment.pop("LD_LIBRARY_PATH", None)
+
+        environment.update(action.get("env", {}))
+
+        for command in command_string.splitlines():
+            logger.debug(f"Running local command: {command}")
+            run(command, shell=True, check=True, env=environment)
+
+    def templatize(self, template):
+        """
+        Utility function for doing template substitution
+        """
+
+        return string.Template(template).substitute(**self.symbols)
