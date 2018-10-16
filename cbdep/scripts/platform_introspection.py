@@ -34,7 +34,8 @@ def get_platforms():
             # Use only the major version number
             dist_ver = distro.major_version()
 
-        platforms.insert(0, dist_id + dist_ver)
+        platforms.insert(0, f"{dist_id}{dist_ver}")
+        platforms.insert(0, f"{dist_id}-{dist_ver}")
 
     elif system == "darwin":
         platforms.insert(0, "macosx")

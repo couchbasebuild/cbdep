@@ -12,6 +12,7 @@ import sys
 import tempfile
 import yaml
 
+from pkg_resources import Requirement
 from subprocess import run
 
 logger = logging.getLogger("cbdep")
@@ -42,7 +43,7 @@ class Installer:
 
     def install(self, package, version, dir):
         """
-        Entry point to install a named package
+        Entry point to install a version of named package
         """
         self.package = package
         self.symbols['PACKAGE'] = package
@@ -71,7 +72,7 @@ class Installer:
 
         block = self.find_block(blocks)
         if block is None:
-            logger.error(f"No blocks for package {package} are appropriate for current system")
+            logger.error(f"No blocks for package {package} {version} are appropriate for current system")
             sys.exit(1)
 
         self.execute_block(block)
@@ -132,9 +133,24 @@ class Installer:
         if "if_version" not in block:
             return True
 
+        # Read the if_version directive, and ensure it is a list
         if_version = block["if_version"]
-        # QQQ
-        return True
+        if isinstance(if_version, list):
+            if_version = [ if_version ]
+
+        for requirement in if_version:
+            # Create a Requirement for this directive. The package name in the
+            # Requirement spec is not actually used, but may as well use the
+            # package name we have
+            req = Requirement.parse(self.package + if_version)
+
+            # And check the version we're installing against the Requirement
+            if req.__contains__(self.version):
+                return True
+
+        # If we had an if_version directive and none of them matches the
+        # version being installed, this block doesn't apply
+        return False
 
     def execute_block(self, block):
         """
