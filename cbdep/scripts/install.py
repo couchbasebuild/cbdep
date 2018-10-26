@@ -41,7 +41,7 @@ class Installer:
         # Populated by do_url() to be the final single downloaded installer
         self.installer_file = None
 
-    def install(self, package, version, dir):
+    def install(self, package, version, x32, dir):
         """
         Entry point to install a version of named package
         """
@@ -49,6 +49,7 @@ class Installer:
         self.symbols['PACKAGE'] = package
         self.version = version
         self.symbols['VERSION'] = version
+        self.x32 = x32
 
         # Make install dir absolute
         # QQQ Should use .resolve() rather than .absolute() since the latter
@@ -157,6 +158,11 @@ class Installer:
         Given a single block from the config, execute all actions
         sequentially
         """
+
+        # Set ARCH in the symbol table
+        if "set_arch" in block:
+            self.handle_set_arch(block.get("set_arch"))
+
         actions = block.get("actions")
         if actions is None:
             logger.error("Malformed configuration file (missing 'actions')")
@@ -178,6 +184,12 @@ class Installer:
             else:
                 logger.error("Malformed configuration file (missing action directive)")
                 sys.exit(1)
+
+    def handle_set_arch(self, arch_args):
+        """
+        Sets ARCH in the symbol table based on the current value of x32
+        """
+        self.symbols['ARCH'] = arch_args[0] if self.x32 else arch_args[1]
 
     def handle_fixed_dir(self, action):
         """

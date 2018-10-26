@@ -63,7 +63,7 @@ class Cbdep:
         installdir = str(pathlib.Path(installdir).resolve())
 
         installer = Installer(yamlfile, self.cache, args.platform)
-        installer.install(args.package, args.version, installdir)
+        installer.install(args.package, args.version, args.x32, installdir)
 
 def main():
     """
@@ -92,6 +92,8 @@ def main():
         help="Package to install")
     install_parser.add_argument("version", type=str,
         help="Version to install")
+    install_parser.add_argument('-3', '--x32', action="store_true",
+        help="Download 32-bit package (default false; only works on a few packages)")
     install_parser.add_argument("-c", "--config-file",
         type=str, help="YAML file descriptor")
     install_parser.add_argument("-d", "--dir",
