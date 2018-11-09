@@ -69,6 +69,14 @@ def main():
     """
     """
 
+    # PyInstaller binaries get LD_LIBRARY_PATH set for them, and that
+    # can have unwanted side-effects for our own subprocesses. Remove
+    # that here - it can still be set by an env: entry in cbdep.config
+    # for an install directive.
+    # This needs to be done very early - even the call to get_platforms()
+    # below indirectly shells out to lsb_release.
+    os.environ.pop("LD_LIBRARY_PATH", None)
+
     parser = argparse.ArgumentParser(
         description='Dependency Management System'
     )

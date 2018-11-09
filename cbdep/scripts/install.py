@@ -260,12 +260,6 @@ class Installer:
 
         command_string = self.templatize(action["run"])
         environment = os.environ.copy()
-
-        # PyInstaller binaries get LD_LIBRARY_PATH set for them, and that
-        # can have unwanted side-effects for our own subprocesses. Remove
-        # that here - it can still be set by an env: entry in cbdep.config.
-        environment.pop("LD_LIBRARY_PATH", None)
-
         environment.update(action.get("env", {}))
 
         for command in command_string.splitlines():
