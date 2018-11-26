@@ -59,6 +59,16 @@ class Installer:
         self.installdir = str(pathlib.Path(dir).absolute())
         self.symbols['INSTALL_DIR'] = self.installdir
 
+        # Provide version components separately - split on . or +, and set up
+        # to four components (major, minor, patch, build)
+        split_re = re.compile('[\.\+]')
+        # Make sure version_bits is 4 elements long
+        version_bits = (split_re.split(version) + 4 * [''])[:4]
+        self.symbols['VERSION_MAJOR'] = version_bits[0]
+        self.symbols['VERSION_MINOR'] = version_bits[1]
+        self.symbols['VERSION_PATCH'] = version_bits[2]
+        self.symbols['VERSION_BUILD'] = version_bits[3]
+
         pkgs = self.descriptor.get("packages")
         if pkgs is None:
             logger.error("Malformed configuration file (missing 'packages')")
