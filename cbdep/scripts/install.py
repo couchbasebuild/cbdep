@@ -23,9 +23,15 @@ class Installer:
     installation template yaml file
     """
 
-    def __init__(self, yamlfile, cache, platforms):
-        with open(yamlfile) as y:
-            self.descriptor = yaml.load(y)
+    def __init__(self, config, cache, platforms):
+        """
+        Base constructor for class. "config" is a YAML object,
+        "cache" is the cache directory, "platforms" is a list of
+        platform names.
+        """
+
+        # These fields are immutable and define the installation environment
+        self.descriptor = config
         self.cache = cache
         self.platforms = platforms
 
@@ -41,10 +47,41 @@ class Installer:
         # Populated by do_url() to be the final single downloaded installer
         self.installer_file = None
 
+        # Create a temp directory that action blocks can use
+        self.temp_dir = tempfile.mkdtemp()
+        self.symbols["TEMP_DIR"] = self.temp_dir
+
+    def __del__(self):
+        """
+        Clean up
+        """
+        shutil.rmtree(self.temp_dir)
+
+    @classmethod
+    def fromYaml(cls, yamlfile, cache, platforms):
+        """
+        Constructor from a YAML configuration file
+        """
+
+        with open(yamlfile) as y:
+            config = yaml.load(y)
+        return cls(config, cache, platforms)
+
+    def copy(self):
+        """
+        Creates a new Installer object with the same configuration
+        as this Installer. Necessary to call a nested install().
+        """
+
+        return Installer(
+            self.descriptor, self.cache, self.platforms
+        )
+
     def install(self, package, version, x32, dir):
         """
         Entry point to install a version of named package
         """
+
         self.package = package
         self.symbols['PACKAGE'] = package
         self.version = version
@@ -189,6 +226,8 @@ class Installer:
                 self.do_url(action)
             elif "unarchive" in action:
                 self.do_unarchive(action)
+            elif "cbdep" in action:
+                self.do_cbdep(action)
             elif "run" in action:
                 self.do_run(action)
             else:
@@ -262,6 +301,19 @@ class Installer:
 
         logger.info(f"Unpacking archive into {unarchive_dir}")
         shutil.unpack_archive(self.installer_file, unarchive_dir)
+
+    def do_cbdep(self, action):
+        """
+        Runs a nested "cbdep install" command
+        """
+
+        package = action["cbdep"]
+        version = action["version"]
+        install_dir = self.templatize(action["install_dir"])
+        x32 = action.get("x32", False)
+
+        installer = self.copy()
+        installer.install(package, version, x32, install_dir)
 
     def do_run(self, action):
         """

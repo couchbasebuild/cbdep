@@ -62,7 +62,7 @@ class Cbdep:
             installdir = "install"
         installdir = str(pathlib.Path(installdir).resolve())
 
-        installer = Installer(yamlfile, self.cache, args.platform)
+        installer = Installer.fromYaml(yamlfile, self.cache, args.platform)
         installer.install(args.package, args.version, args.x32, installdir)
 
 def main():
