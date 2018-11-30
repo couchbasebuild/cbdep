@@ -102,7 +102,7 @@ class Installer:
         version_bits = split_re.split(self.version)
         # Save a pkg_config-compatible variant of the version number
         self.safe_version = '.'.join(version_bits)
-        logger.info(f"Safe version is {self.safe_version}")
+        logger.debug(f"Safe version is {self.safe_version}")
         # Make sure version_bits is 4 elements long
         version_bits = (version_bits + 4 * [''])[:4]
         self.symbols['VERSION_MAJOR'] = version_bits[0]
@@ -172,6 +172,14 @@ class Installer:
         if matched_platform:
             self.symbols['PLATFORM'] = local_platform
             logger.debug(f"Identified platform {local_platform}")
+
+            # Default value for PLATFORM_EXT
+            # QQQ Allow overriding in config
+            if local_platform == "windows":
+                self.symbols['PLATFORM_EXT'] = "zip"
+            else:
+                self.symbols['PLATFORM_EXT'] = "tar.gz"
+
             return True
 
         return False
