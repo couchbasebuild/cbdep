@@ -96,11 +96,15 @@ class Installer:
         self.installdir = str(pathlib.Path(dir).absolute())
         self.symbols['INSTALL_DIR'] = self.installdir
 
-        # Provide version components separately - split on . or +, and set up
-        # to four components (major, minor, patch, build)
-        split_re = re.compile('[\.\+]')
+        # Provide version components separately - split on any non-numeric
+        # characters; set up to four components (major, minor, patch, build)
+        split_re = re.compile('[^0-9]+')
+        version_bits = split_re.split(self.version)
+        # Save a pkg_config-compatible variant of the version number
+        self.safe_version = '.'.join(version_bits)
+        logger.info(f"Safe version is {self.safe_version}")
         # Make sure version_bits is 4 elements long
-        version_bits = (split_re.split(version) + 4 * [''])[:4]
+        version_bits = (version_bits + 4 * [''])[:4]
         self.symbols['VERSION_MAJOR'] = version_bits[0]
         self.symbols['VERSION_MINOR'] = version_bits[1]
         self.symbols['VERSION_PATCH'] = version_bits[2]
@@ -193,7 +197,7 @@ class Installer:
             req = Requirement.parse(self.package + if_version)
 
             # And check the version we're installing against the Requirement
-            if req.__contains__(self.version):
+            if req.__contains__(self.safe_version):
                 return True
 
         # If we had an if_version directive and none of them matches the
