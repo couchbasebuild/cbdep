@@ -242,6 +242,8 @@ class Installer:
                 self.do_cbdep(action)
             elif "run" in action:
                 self.do_run(action)
+            elif "rename_dir" in action:
+                self.do_rename_dir(action)
             else:
                 logger.error("Malformed configuration file (missing action directive)")
                 sys.exit(1)
@@ -339,6 +341,15 @@ class Installer:
         for command in command_string.splitlines():
             logger.debug(f"Running local command: {command}")
             run(command, shell=True, check=True, env=environment)
+
+    def do_rename_dir(self, action):
+        """
+        Renames a specified top-level directory to the standardized
+        ${PACKAGE}-${VERSION}
+        """
+
+        top_dir = pathlib.Path(self.installdir) / self.templatize(action["rename_dir"])
+        top_dir.rename(pathlib.Path(self.installdir) / f"{self.package}-{self.version}")
 
     def templatize(self, template):
         """
