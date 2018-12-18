@@ -100,15 +100,34 @@ class Installer:
         # characters; set up to four components (major, minor, patch, build)
         split_re = re.compile('[^0-9]+')
         version_bits = split_re.split(self.version)
+
         # Save a pkg_config-compatible variant of the version number
         self.safe_version = '.'.join(version_bits)
         logger.debug(f"Safe version is {self.safe_version}")
+
         # Make sure version_bits is 4 elements long
         version_bits = (version_bits + 4 * [''])[:4]
+
+        # Special nonsense for Java - version numbers have either 1 or 3
+        # component (eg. "11" followed by "11.0.1"), but then also have
+        # a build number after a + (eg., "11+28" followed by "11.0.1+13").
+        # So if this is Java/OpenJDK and "patch" and "build" are empty,
+        # re-arrange the numbers.
+        if package.startswith("java") or package.startswith("openjdk"):
+            if not version_bits[2] and not version_bits[3]:
+                version_bits[3] = version_bits[1]
+                version_bits[1] = ''
+
         self.symbols['VERSION_MAJOR'] = version_bits[0]
         self.symbols['VERSION_MINOR'] = version_bits[1]
         self.symbols['VERSION_PATCH'] = version_bits[2]
         self.symbols['VERSION_BUILD'] = version_bits[3]
+
+        # Also provide single field of major.minor.patch with the appropriate
+        # number of dots
+        self.symbols['VERSION_MAJORMINORPATCH'] = '.'.join(
+            [x for x in version_bits[:3] if x]
+        )
 
         pkgs = self.descriptor.get("packages")
         if pkgs is None:
