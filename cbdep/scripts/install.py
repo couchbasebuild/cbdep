@@ -136,6 +136,13 @@ class Installer:
 
         blocks = pkgs.get(package)
         if blocks is None:
+            classics = self.descriptor.get("classic-cbdeps")
+            if classics is not None:
+                # Possibly a "classic" cbdeps package
+                if package in classics['packages']:
+                    blocks = classics['descriptor']
+
+        if blocks is None:
             logger.error(f"Unknown package: {package}")
             sys.exit(1)
 
