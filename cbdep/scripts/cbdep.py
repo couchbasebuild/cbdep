@@ -41,9 +41,9 @@ class Cbdep:
         logger.debug("Determining platform...")
         print (get_platforms())
 
-    def do_install(self, args):
+    def configpath(self, args):
         """
-        Install a package based on a descriptor YAML
+        Returns the name of the config file defining the available packages
         """
 
         yamlfile = args.config_file
@@ -56,14 +56,36 @@ class Cbdep:
                 mydir = pathlib.Path.home()
             yamlfile = str(mydir / "cbdep.config")
 
+        return yamlfile
+
+    def do_install(self, args):
+        """
+        Install a package based on a descriptor YAML
+        """
+
         installdir = args.dir
         if installdir is None:
             # QQQ
             installdir = "install"
         installdir = str(pathlib.Path(installdir).resolve())
 
-        installer = Installer.fromYaml(yamlfile, self.cache, args.platform)
+        installer = Installer.fromYaml(
+            self.configpath(args), self.cache, args.platform
+        )
         installer.install(args.package, args.version, args.x32, installdir)
+
+    def do_list(self, args):
+        """
+        List available packages
+        """
+
+        with open(self.configpath(args)) as y:
+            config = yaml.load(y)
+        pkgs = list(config['packages'].keys()) + config['classic-cbdeps']['packages']
+        print("Available packages (not all may be available on all platforms):")
+        for pkg in sorted(pkgs):
+            print(f"  {pkg}")
+        print()
 
 def main():
     """
@@ -112,6 +134,13 @@ def main():
         "platform", help="Dump introspected platform information"
     )
     platform_parser.set_defaults(func=Cbdep.do_platform)
+
+    list_parser = subparsers.add_parser(
+        "list", help="List available cbdep packages"
+    )
+    list_parser.add_argument("-c", "--config-file",
+        type=str, help="YAML file descriptor")
+    list_parser.set_defaults(func=Cbdep.do_list)
 
     args = parser.parse_args()
 
