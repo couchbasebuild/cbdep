@@ -4,6 +4,7 @@ Functions for determining current platform information
 
 import platform
 
+
 def get_platforms():
     """
     Returns a list of increasingly-generic identifiers for the current
@@ -14,7 +15,7 @@ def get_platforms():
     system = platform.system().lower()
 
     # Initialize list
-    platforms = [ system ]
+    platforms = [system]
 
     # OS-specific stuff
     if system == "linux":

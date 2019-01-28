@@ -17,6 +17,7 @@ from subprocess import run
 
 logger = logging.getLogger("cbdep")
 
+
 class Installer:
     """
     Manages caching installation files and unpacking them based on an
@@ -36,12 +37,13 @@ class Installer:
         self.platforms = platforms
 
         # Things that will be substituted in all templates
-        self.symbols = {}
+        self.symbols = dict()
         self.symbols["HOME"] = str(pathlib.Path.home())
 
         # Populated by install()
         self.package = None
         self.version = None
+        self.safe_version = None
         self.installdir = None
 
         # Populated by do_url() to be the final single downloaded installer
@@ -50,6 +52,7 @@ class Installer:
         # Create a temp directory that action blocks can use
         self.temp_dir = tempfile.mkdtemp()
         self.symbols["TEMP_DIR"] = self.temp_dir
+        self.x32 = None
 
     def __del__(self):
         """
@@ -77,7 +80,7 @@ class Installer:
             self.descriptor, self.cache, self.platforms
         )
 
-    def install(self, package, version, x32, dir):
+    def install(self, package, version, x32, inst_dir):
         """
         Entry point to install a version of named package
         """
@@ -88,12 +91,12 @@ class Installer:
         self.symbols['VERSION'] = version
         self.x32 = x32
 
-        # Make install dir absolute
+        # Make install inst_dir absolute
         # QQQ Should use .resolve() rather than .absolute() since the latter
         # is semi-documented and semi-deprecated. However .resolve() doesn't
         # actually work as documented on Windows (doesn't return an absolute
         # path), where .absolute() does. So...
-        self.installdir = str(pathlib.Path(dir).absolute())
+        self.installdir = str(pathlib.Path(inst_dir).absolute())
         self.symbols['INSTALL_DIR'] = self.installdir
 
         # Provide version components separately - split on any non-numeric
@@ -150,7 +153,8 @@ class Installer:
 
         block = self.find_block(blocks)
         if block is None:
-            logger.error(f"No blocks for package {package} {version} are appropriate for current system")
+            logger.error(f"No blocks for package {package} {version} "
+                         f"are appropriate for current system")
             sys.exit(1)
 
         self.execute_block(block)
@@ -182,7 +186,7 @@ class Installer:
         if isinstance(self.platforms, list):
             local_platforms = self.platforms
         else:
-            local_platforms = [ self.platforms ]
+            local_platforms = [self.platforms]
 
         matched_platform = False
         for local_platform in local_platforms:
@@ -222,7 +226,7 @@ class Installer:
         # Read the if_version directive, and ensure it is a list
         if_version = block["if_version"]
         if isinstance(if_version, list):
-            if_version = [ if_version ]
+            if_version = [if_version]
 
         for requirement in if_version:
             # Create a Requirement for this directive. The package name in the
@@ -271,7 +275,9 @@ class Installer:
             elif "rename_dir" in action:
                 self.do_rename_dir(action)
             else:
-                logger.error("Malformed configuration file (missing action directive)")
+                logger.error(
+                    "Malformed configuration file (missing action directive)"
+                )
                 sys.exit(1)
 
     def handle_set_arch(self, arch_args):
@@ -335,7 +341,8 @@ class Installer:
         unarchive_dir = self.installdir
 
         if "add_dir" in action:
-            new_dir = pathlib.Path(self.installdir) / self.templatize(action["add_dir"])
+            new_dir = (pathlib.Path(self.installdir) /
+                       self.templatize(action["add_dir"]))
             os.makedirs(new_dir, exist_ok=True)
             unarchive_dir = str(new_dir)
 
@@ -374,8 +381,10 @@ class Installer:
         ${PACKAGE}-${VERSION}
         """
 
-        top_dir = pathlib.Path(self.installdir) / self.templatize(action["rename_dir"])
-        top_dir.rename(pathlib.Path(self.installdir) / f"{self.package}-{self.version}")
+        top_dir = (pathlib.Path(self.installdir) /
+                   self.templatize(action["rename_dir"]))
+        top_dir.rename(pathlib.Path(self.installdir) /
+                       f"{self.package}-{self.version}")
 
     def templatize(self, template):
         """

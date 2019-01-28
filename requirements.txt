@@ -1,4 +1,4 @@
+git+https://github.com/couchbase/python-couchbase-commons@v0.5.0#egg=cbbuild-0.5.0&subdirectory=cbbuild
 PyYAML
 requests
 distro
-

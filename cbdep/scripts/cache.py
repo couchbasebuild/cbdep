@@ -13,6 +13,7 @@ import urllib.parse
 # Set up logging and handler
 logger = logging.getLogger('cbdep')
 
+
 class Cache:
     """
     Class to store downloaded files in a local cache
@@ -57,7 +58,8 @@ class Cache:
                 f.write(url)
 
         # Download the URL
-        with requests.get(url, allow_redirects=True, stream=True, timeout=30.0) as r:
+        with requests.get(url, allow_redirects=True, stream=True,
+                          timeout=30.0) as r:
             r.raise_for_status()
 
             # Determine download filename
@@ -78,7 +80,6 @@ class Cache:
                         fd.write(chunk)
                 with open(cachefilename, 'w') as f:
                     f.write(filename)
-
             except:
                 if cachefile.exists():
                     os.unlink(cachefile)

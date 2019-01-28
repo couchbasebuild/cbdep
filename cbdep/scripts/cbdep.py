@@ -5,14 +5,17 @@ Dependency Management System
 import argparse
 import logging
 import os
+import os.path
 import pathlib
 import sys
-
 import yaml
 
-from cache import Cache
-from install import Installer
-from platform_introspection import get_platforms
+from .cache import Cache
+from .install import Installer
+from .platform_introspection import get_platforms
+
+import cbbuild.cbutil.update_tool_check as update_tool_check
+
 
 # Set up logging and handler
 logger = logging.getLogger('cbdep')
@@ -21,7 +24,12 @@ logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 logger.addHandler(ch)
 
+
 class Cbdep:
+    """
+
+    """
+
     def __init__(self):
         cachedir = pathlib.Path.home() / ".cbdepcache"
         self.cache = Cache(str(cachedir))
@@ -33,25 +41,27 @@ class Cbdep:
 
         self.cache.get(args.url)
 
-    def do_platform(self, args):
+    @staticmethod
+    def do_platform(_args):
         """
         Display introspected platform information
         """
 
         logger.debug("Determining platform...")
-        print (get_platforms())
+        print(get_platforms())
 
-    def configpath(self, args):
+    @staticmethod
+    def configpath(args):
         """
         Returns the name of the config file defining the available packages
         """
 
         yamlfile = args.config_file
         if yamlfile is None:
-            if getattr( sys, 'frozen', False ) :
+            if getattr(sys, 'frozen', False):
                 # running in a bundle
                 mydir = pathlib.Path(sys._MEIPASS)
-            else :
+            else:
                 # running live
                 mydir = pathlib.Path.home()
             yamlfile = str(mydir / "cbdep.config")
@@ -81,11 +91,15 @@ class Cbdep:
 
         with open(self.configpath(args)) as y:
             config = yaml.load(y)
-        pkgs = list(config['packages'].keys()) + config['classic-cbdeps']['packages']
-        print("Available packages (not all may be available on all platforms):")
+        pkgs = list(config['packages'].keys()) \
+            + config['classic-cbdeps']['packages']
+        print(
+            "Available packages (not all may be available on all platforms):"
+        )
         for pkg in sorted(pkgs):
             print(f"  {pkg}")
         print()
+
 
 def main():
     """
@@ -119,15 +133,20 @@ def main():
         "install", help="Install a package"
     )
     install_parser.add_argument("package", type=str,
-        help="Package to install")
+                                help="Package to install")
     install_parser.add_argument("version", type=str,
-        help="Version to install")
-    install_parser.add_argument('-3', '--x32', action="store_true",
-        help="Download 32-bit package (default false; only works on a few packages)")
-    install_parser.add_argument("-c", "--config-file",
-        type=str, help="YAML file descriptor")
-    install_parser.add_argument("-d", "--dir",
-        type=str, help="Directory to unpack into (not applicable for all packages)")
+                                help="Version to install")
+    install_parser.add_argument(
+        '-3', '--x32', action="store_true",
+        help="Download 32-bit package (default false; only works on "
+             "a few packages)"
+    )
+    install_parser.add_argument("-c", "--config-file", type=str,
+                                help="YAML file descriptor")
+    install_parser.add_argument(
+        "-d", "--dir", type=str,
+        help="Directory to unpack into (not applicable for all packages)"
+    )
     install_parser.set_defaults(func=Cbdep.do_install)
 
     platform_parser = subparsers.add_parser(
@@ -143,6 +162,9 @@ def main():
     list_parser.set_defaults(func=Cbdep.do_list)
 
     args = parser.parse_args()
+
+    tool_name = os.path.basename(sys.argv[0])
+    update_tool_check.check_for_update(tool_name, args)
 
     # Set logging to debug level on stream handler if --debug was set
     if args.debug:
