@@ -14,7 +14,7 @@ from .cache import Cache
 from .install import Installer
 from .platform_introspection import get_platforms
 
-import cbbuild.cbutil.update_tool_check as update_tool_check
+from cbbuild.util import update_tool_check
 
 
 # Set up logging and handler
