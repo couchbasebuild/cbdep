@@ -10,9 +10,9 @@ import pathlib
 import sys
 import yaml
 
-from .cache import Cache
-from .install import Installer
-from .platform_introspection import get_platforms
+from cache import Cache
+from install import Installer
+from platform_introspection import get_platforms
 
 from cbbuild.util import update_tool_check
 
@@ -164,7 +164,7 @@ def main():
     args = parser.parse_args()
 
     tool_name = os.path.basename(sys.argv[0])
-    update_tool_check.check_for_update(tool_name, args)
+    #update_tool_check.check_for_update(tool_name, args)
 
     # Set logging to debug level on stream handler if --debug was set
     if args.debug:

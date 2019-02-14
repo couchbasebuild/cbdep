@@ -182,26 +182,21 @@ class Installer:
         if "if_platform" not in block:
             return True
 
-        if_platform = block["if_platform"]
-        if isinstance(self.platforms, list):
-            local_platforms = self.platforms
-        else:
-            local_platforms = [self.platforms]
+        # Create case-insensitive map of if_platform values
+        if_platform = list(block["if_platform"])
+        lc_platforms = {x.casefold(): x for x in if_platform}
 
-        matched_platform = False
+        local_platforms = list(self.platforms)
+
+        matched_platform = None
         for local_platform in local_platforms:
-            if isinstance(if_platform, list):
-                if local_platform in if_platform:
-                    matched_platform = True
-                    break
-            else:
-                if if_platform == local_platform:
-                    matched_platform = True
-                    break
+            if local_platform in lc_platforms:
+                matched_platform = lc_platforms[local_platform]
+                break
 
-        if matched_platform:
-            self.symbols['PLATFORM'] = local_platform
-            logger.debug(f"Identified platform {local_platform}")
+        if matched_platform is not None:
+            self.symbols['PLATFORM'] = matched_platform
+            logger.debug(f"Identified platform {matched_platform}")
 
             # Default value for PLATFORM_EXT
             # QQQ Allow overriding in config
