@@ -35,6 +35,8 @@ class Installer:
         self.descriptor = config
         self.cache = cache
         self.platforms = platforms
+        if not isinstance(self.platforms, list):
+            self.platforms = [self.platforms]
 
         # Things that will be substituted in all templates
         self.symbols = dict()
@@ -183,13 +185,13 @@ class Installer:
             return True
 
         # Create case-insensitive map of if_platform values
-        if_platform = list(block["if_platform"])
+        if_platform = block["if_platform"]
+        if not isinstance(if_platform, list):
+            if_platform = [if_platform]
         lc_platforms = {x.casefold(): x for x in if_platform}
 
-        local_platforms = list(self.platforms)
-
         matched_platform = None
-        for local_platform in local_platforms:
+        for local_platform in self.platforms:
             if local_platform in lc_platforms:
                 matched_platform = lc_platforms[local_platform]
                 break
@@ -220,7 +222,7 @@ class Installer:
 
         # Read the if_version directive, and ensure it is a list
         if_version = block["if_version"]
-        if isinstance(if_version, list):
+        if not isinstance(if_version, list):
             if_version = [if_version]
 
         for requirement in if_version:
