@@ -229,7 +229,7 @@ class Installer:
             # Create a Requirement for this directive. The package name in the
             # Requirement spec is not actually used, but may as well use the
             # package name we have
-            req = Requirement.parse(self.package + if_version)
+            req = Requirement.parse(self.package + requirement)
 
             # And check the version we're installing against the Requirement
             if req.__contains__(self.safe_version):
