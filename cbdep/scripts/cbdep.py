@@ -7,6 +7,7 @@ import logging
 import os
 import os.path
 import pathlib
+import shutil
 import sys
 import yaml
 
@@ -83,14 +84,19 @@ class Cbdep:
 
         installdir = args.dir
         if installdir is None:
-            # QQQ
             installdir = "install"
         installdir = str(pathlib.Path(installdir).resolve())
 
         installer = Installer.fromYaml(
             self.configpath(args), self.cache, args.platform
         )
+        installer.set_cache_only(args.cache_only)
+
         installer.install(args.package, args.version, args.x32, installdir)
+
+        if args.output is not None:
+            logger.debug(f"Copying downloaded file to {args.output}")
+            shutil.copy2(installer.get_installer_file(), args.output)
 
     def do_list(self, args):
         """
@@ -170,6 +176,20 @@ def main():
     install_parser.add_argument(
         "-d", "--dir", type=str,
         help="Directory to unpack into (not applicable for all packages)"
+    )
+    install_parser.add_argument(
+        "-n", "--cache-only", action='store_true',
+        help="Only download any installer files, do not install"
+    )
+    install_parser.add_argument(
+        '-r', '--report', action='store_true',
+        help="Report the filename in the cache (only last-downloaded file"
+            "in case of multiple downloads)"
+    )
+    install_parser.add_argument(
+        '-o', '--output', type=str,
+        help="Output cached file to a local file (only last-downloaded file"
+            "in case of multiple downloads)"
     )
     install_parser.set_defaults(func=Cbdep.do_install)
 

@@ -48,6 +48,9 @@ class Installer:
         self.safe_version = None
         self.installdir = None
 
+        # Default, can be overridden by self.cacheOnly()
+        self.cache_only = False
+
         # Populated by do_url() to be the final single downloaded installer
         self.installer_file = None
 
@@ -81,6 +84,22 @@ class Installer:
         return Installer(
             self.descriptor, self.cache, self.platforms
         )
+
+    def set_cache_only(self, cache_only):
+        """
+        If set to true, then calling install() will only execute any
+        'url' directives in the corresponding package
+        """
+
+        self.cache_only = cache_only
+
+    def get_installer_file(self):
+        """
+        Returns the (most recent) installer_file, ie, the resulting
+        local filename of the most recent 'url' directive
+        """
+
+        return self.installer_file
 
     def install(self, package, version, x32, inst_dir):
         """
@@ -263,6 +282,9 @@ class Installer:
 
             if "url" in action:
                 self.do_url(action)
+            elif self.cache_only:
+                # Skip any other actions if doing cache-only
+                continue
             elif "unarchive" in action:
                 self.do_unarchive(action)
             elif "cbdep" in action:
