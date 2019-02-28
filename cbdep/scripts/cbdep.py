@@ -41,6 +41,14 @@ class Cbdep:
 
         self.cache.get(args.url)
 
+        # Output the cache filename, if requested
+        if (args.report):
+            self.cache.report(args.url)
+
+        # Save the cached file locally, if requested
+        if (args.output is not None):
+            self.cache.save(args.url, args.output)
+
     @staticmethod
     def do_platform(_args):
         """
@@ -116,33 +124,49 @@ def main():
     parser = argparse.ArgumentParser(
         description='Dependency Management System'
     )
-    parser.add_argument('-d', '--debug', action='store_true',
-                        help='Enable debugging output')
-    parser.add_argument('-p', '--platform', type=str,
-                        default=get_platforms(),
-                        help="Override detected platform")
+    parser.add_argument(
+        '-d', '--debug', action='store_true',
+        help='Enable debugging output'
+    )
+    parser.add_argument(
+        '-p', '--platform', type=str,
+        default=get_platforms(),
+        help="Override detected platform"
+    )
     subparsers = parser.add_subparsers()
 
     cache_parser = subparsers.add_parser(
         "cache", help="Add downloaded URL to local cache"
     )
     cache_parser.add_argument("url", type=str, help="URL to cache")
+    cache_parser.add_argument(
+        '-r', '--report', action='store_true',
+        help="Report the filename in the cache"
+    )
+    cache_parser.add_argument(
+        '-o', '--output', type=str,
+        help="Output cached file to a local file"
+    )
     cache_parser.set_defaults(func=Cbdep.do_cache)
 
     install_parser = subparsers.add_parser(
         "install", help="Install a package"
     )
-    install_parser.add_argument("package", type=str,
-                                help="Package to install")
-    install_parser.add_argument("version", type=str,
-                                help="Version to install")
+    install_parser.add_argument(
+        "package", type=str, help="Package to install"
+    )
+    install_parser.add_argument(
+        "version", type=str, help="Version to install"
+    )
     install_parser.add_argument(
         '-3', '--x32', action="store_true",
         help="Download 32-bit package (default false; only works on "
              "a few packages)"
     )
-    install_parser.add_argument("-c", "--config-file", type=str,
-                                help="YAML file descriptor")
+    install_parser.add_argument(
+        "-c", "--config-file", type=str,
+        help="YAML file descriptor"
+    )
     install_parser.add_argument(
         "-d", "--dir", type=str,
         help="Directory to unpack into (not applicable for all packages)"
@@ -157,8 +181,9 @@ def main():
     list_parser = subparsers.add_parser(
         "list", help="List available cbdep packages"
     )
-    list_parser.add_argument("-c", "--config-file",
-        type=str, help="YAML file descriptor")
+    list_parser.add_argument(
+        "-c", "--config-file", type=str, help="YAML file descriptor"
+    )
     list_parser.set_defaults(func=Cbdep.do_list)
 
     args = parser.parse_args()

@@ -8,6 +8,7 @@ import os
 import pathlib
 import re
 import requests
+import shutil
 import urllib.parse
 
 # Set up logging and handler
@@ -89,3 +90,17 @@ class Cache:
 
         logger.debug("Downloaded file")
         return cachefile
+
+    def report(self, url):
+        """
+        Output the full path to the file in the cache
+        """
+
+        print(self.get(url))
+
+    def save(self, url, output):
+        """
+        Save a local copy of a file in the cache
+        """
+
+        shutil.copyfile(self.get(url), output)
