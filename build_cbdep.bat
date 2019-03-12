@@ -1,3 +1,5 @@
+setlocal
+
 set START_DIR="%CD%"
 
 set SCRIPTPATH=%~dp0
