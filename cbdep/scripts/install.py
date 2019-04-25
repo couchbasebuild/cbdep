@@ -46,10 +46,15 @@ class Installer:
         self.package = None
         self.version = None
         self.safe_version = None
+        self.x32 = None
+        self.base_url = None
         self.installdir = None
 
         # Default, can be overridden by self.cacheOnly()
         self.cache_only = False
+
+        # Default, can be overridden by self.recache()
+        self.recache = False
 
         # Populated by do_url() to be the final single downloaded installer
         self.installer_file = None
@@ -57,7 +62,6 @@ class Installer:
         # Create a temp directory that action blocks can use
         self.temp_dir = tempfile.mkdtemp()
         self.symbols["TEMP_DIR"] = self.temp_dir
-        self.x32 = None
 
     def __del__(self):
         """
@@ -72,7 +76,7 @@ class Installer:
         """
 
         with open(yamlfile) as y:
-            config = yaml.load(y)
+            config = yaml.safe_load(y)
         return cls(config, cache, platforms)
 
     def copy(self):
@@ -93,6 +97,15 @@ class Installer:
 
         self.cache_only = cache_only
 
+    def set_recache(self, recache):
+        """
+        If set to true, then calling install() will ignore any previously-
+        cached installer files and re-download them (and add the new files
+        to the cache, replacing old ones)
+        """
+
+        self.recache = recache
+
     def get_installer_file(self):
         """
         Returns the (most recent) installer_file, ie, the resulting
@@ -101,7 +114,7 @@ class Installer:
 
         return self.installer_file
 
-    def install(self, package, version, x32, inst_dir):
+    def install(self, package, version, x32, base_url, inst_dir):
         """
         Entry point to install a version of named package
         """
@@ -111,6 +124,7 @@ class Installer:
         self.version = version
         self.symbols['VERSION'] = version
         self.x32 = x32
+        self.base_url = base_url
 
         # Make install inst_dir absolute
         # QQQ Should use .resolve() rather than .absolute() since the latter
@@ -268,6 +282,10 @@ class Installer:
         if "set_arch" in block:
             self.handle_set_arch(block.get("set_arch"))
 
+        # Set BASE_URL in the symbol table
+        if "base_url" in block:
+            self.handle_base_url(block.get("base_url"))
+
         actions = block.get("actions")
         if actions is None:
             logger.error("Malformed configuration file (missing 'actions')")
@@ -303,7 +321,24 @@ class Installer:
         """
         Sets ARCH in the symbol table based on the current value of x32
         """
+
         self.symbols['ARCH'] = arch_args[0] if self.x32 else arch_args[1]
+
+    def handle_base_url(self, url):
+        """
+        Handles a 'base_url' directive
+        """
+
+        # If the user specified a base URL, use that; otherwise use the
+        # default base URL specified by the config file
+        if self.base_url is not None:
+            base_url = self.base_url
+            logger.debug(f"Using user-provided base URL {base_url}")
+        else:
+            base_url = url
+            logger.debug(f"Using default base URL {base_url}")
+        template = string.Template(base_url)
+        self.symbols['BASE_URL'] = template.substitute(**self.symbols)
 
     def handle_fixed_dir(self, action):
         """
@@ -330,7 +365,7 @@ class Installer:
                 if match:
                     url = match.group(1)
                     logger.debug(f"...found {url}")
-                    return str(self.cache.get(url))
+                    return str(self.cache.get(url, self.recache))
 
         logger.error("Scraped HTML did not find {regexp}")
         sys.exit(1)
@@ -342,7 +377,7 @@ class Installer:
 
         template = string.Template(action["url"])
         url = template.substitute(**self.symbols)
-        localfile = str(self.cache.get(url))
+        localfile = str(self.cache.get(url, self.recache))
 
         # Handle strange redirects
         if "scrape_html" in action:

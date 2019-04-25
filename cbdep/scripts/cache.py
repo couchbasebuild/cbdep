@@ -26,9 +26,10 @@ class Cache:
         """
         self.directory = pathlib.Path(directory)
 
-    def get(self, url):
+    def get(self, url, recache=False):
         """
-        Downloads url (if necessary), saves in local cache
+        Downloads url (if necessary), saves in local cache. If recache is
+        True, will always re-download the url.
         """
 
         # Local cache directory structure is keyed on an MD5 checksum of the
@@ -46,7 +47,7 @@ class Cache:
 
         # If "filename" file exists, it's a hit; read the actual filename
         # from there and return the cached content file
-        if cachefilename.exists():
+        if cachefilename.exists() and not recache:
             logger.debug(f"Cache hit for {url}")
             with open(cachefilename) as f:
                 filename = f.readline()

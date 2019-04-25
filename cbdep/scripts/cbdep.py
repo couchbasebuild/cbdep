@@ -40,7 +40,7 @@ class Cbdep:
         Cache a URL
         """
 
-        self.cache.get(args.url)
+        self.cache.get(args.url, args.recache)
 
         # Output the cache filename, if requested
         if (args.report):
@@ -91,8 +91,15 @@ class Cbdep:
             self.configpath(args), self.cache, args.platform
         )
         installer.set_cache_only(args.cache_only)
+        installer.set_recache(args.recache)
 
-        installer.install(args.package, args.version, args.x32, installdir)
+        installer.install(
+            args.package,
+            args.version,
+            args.x32,
+            args.base_url,
+            installdir
+        )
 
         if args.output is not None:
             logger.debug(f"Copying downloaded file to {args.output}")
@@ -131,11 +138,11 @@ def main():
         description='Dependency Management System'
     )
     parser.add_argument(
-        '-d', '--debug', action='store_true',
-        help='Enable debugging output'
+        "-d", "--debug", action="store_true",
+        help="Enable debugging output"
     )
     parser.add_argument(
-        '-p', '--platform', type=str,
+        "-p", "--platform", type=str,
         default=get_platforms(),
         help="Override detected platform"
     )
@@ -146,11 +153,15 @@ def main():
     )
     cache_parser.add_argument("url", type=str, help="URL to cache")
     cache_parser.add_argument(
-        '-r', '--report', action='store_true',
+        "-r", "--report", action="store_true",
         help="Report the filename in the cache"
     )
     cache_parser.add_argument(
-        '-o', '--output', type=str,
+        "--recache", action="store_true",
+        help="Re-download URL, replacing files in cache"
+    )
+    cache_parser.add_argument(
+        "-o", "--output", type=str,
         help="Output cached file to a local file"
     )
     cache_parser.set_defaults(func=Cbdep.do_cache)
@@ -165,7 +176,7 @@ def main():
         "version", type=str, help="Version to install"
     )
     install_parser.add_argument(
-        '-3', '--x32', action="store_true",
+        "-3", "--x32", action="store_true",
         help="Download 32-bit package (default false; only works on "
              "a few packages)"
     )
@@ -178,18 +189,26 @@ def main():
         help="Directory to unpack into (not applicable for all packages)"
     )
     install_parser.add_argument(
+        "-b", "--base-url", type=str,
+        help="Alternate base URL for downloading dep (only applicable to a few packages)"
+    )
+    install_parser.add_argument(
         "-n", "--cache-only", action='store_true',
         help="Only download any installer files, do not install"
     )
     install_parser.add_argument(
-        '-r', '--report', action='store_true',
+        "-r", "--report", action="store_true",
         help="Report the filename in the cache (only last-downloaded file"
             "in case of multiple downloads)"
     )
     install_parser.add_argument(
-        '-o', '--output', type=str,
+        "-o", "--output", type=str,
         help="Output cached file to a local file (only last-downloaded file"
             "in case of multiple downloads)"
+    )
+    install_parser.add_argument(
+        "--recache", action="store_true",
+        help="Re-download any installer files to cache, replacing files in cache"
     )
     install_parser.set_defaults(func=Cbdep.do_install)
 
