@@ -38,7 +38,7 @@ def get_platforms():
         platforms.insert(0, f"{dist_id}{dist_ver}")
         platforms.insert(0, f"{dist_id}-{dist_ver}")
 
-        if dist_id == "sles":
+        if dist_id == "sles" or dist_id.startswith("opensuse"):
             # Cbdeps 1.0, at least, refers to all SUSE as "suse", so offer
             # those as platform names too
             dist_id = "suse"
