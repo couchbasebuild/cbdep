@@ -51,7 +51,7 @@ class Cbdep:
             self.cache.save(args.url, args.output)
 
     @staticmethod
-    def do_platform(_args):
+    def do_platform(self, args):
         """
         Display introspected platform information
         """

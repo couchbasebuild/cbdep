@@ -32,11 +32,20 @@ def get_platforms():
         else:
             # Other supported distros use rolling releases, so eg.
             # Centos 6.5 shouldn't differ importantly from Centos 6.9.
-            # Use only the major version number
+            # Use only the major version number.
             dist_ver = distro.major_version()
 
         platforms.insert(0, f"{dist_id}{dist_ver}")
         platforms.insert(0, f"{dist_id}-{dist_ver}")
+
+        if dist_id == "sles":
+            # Cbdeps 1.0, at least, refers to all SUSE as "suse", so offer
+            # those as platform names too
+            dist_id = "suse"
+            platforms.insert(0, dist_id)
+            platforms.insert(0, f"{dist_id}{dist_ver}")
+            platforms.insert(0, f"{dist_id}-{dist_ver}")
+
 
     elif system == "darwin":
         platforms.insert(0, "macosx")
