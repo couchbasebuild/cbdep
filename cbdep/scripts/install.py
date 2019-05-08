@@ -303,6 +303,8 @@ class Installer:
             elif self.cache_only:
                 # Skip any other actions if doing cache-only
                 continue
+            elif "install_dir" in action:
+                self.do_install_dir(action)
             elif "unarchive" in action:
                 self.do_unarchive(action)
             elif "cbdep" in action:
@@ -386,6 +388,16 @@ class Installer:
         # Remember the downloaded file
         self.installer_file = localfile
         self.symbols['DL'] = localfile
+
+    def do_install_dir(self, action):
+        """
+        Handles an 'install_dir' directive, which resets self.installdir
+        """
+
+        template = string.Template(action["install_dir"])
+        self.installdir = template.substitute(**self.symbols)
+        self.symbols['INSTALL_DIR'] = self.installdir
+        logger.info(f"Overriding install dir to {self.installdir}")
 
     def do_unarchive(self, action):
         """
