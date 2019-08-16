@@ -137,7 +137,7 @@ class Installer:
         # Provide version components separately - split on any non-numeric
         # characters; set up to four components (major, minor, patch, build)
         split_re = re.compile('[^0-9]+')
-        version_bits = split_re.split(self.version)
+        version_bits = split_re.split(self.version, maxsplit=3)
 
         # Save a pkg_config-compatible variant of the version number
         self.safe_version = '.'.join(version_bits)
