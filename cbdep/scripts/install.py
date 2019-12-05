@@ -360,7 +360,7 @@ class Installer:
         """
 
         matcher = re.compile(regexp)
-        with open(localfile) as f:
+        with open(localfile, encoding='utf-8') as f:
             logger.debug(f"Searching {localfile} for {regexp}...")
             for line in f:
                 match = matcher.search(line)
