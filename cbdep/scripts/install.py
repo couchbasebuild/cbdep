@@ -383,7 +383,13 @@ class Installer:
 
         # Handle strange redirects
         if "scrape_html" in action:
-            localfile = self.scrape_html(localfile, action["scrape_html"])
+            try:
+                localfile = self.scrape_html(localfile, action["scrape_html"])
+            except:
+                # Try again just in case we've cached a bad HTML file
+                logger.debug("Error parsing HTML, trying to get a fresh copy..")
+                localfile = str(self.cache.get(url, True))
+                localfile = self.scrape_html(localfile, action["scrape_html"])
 
         # Remember the downloaded file
         self.installer_file = localfile
