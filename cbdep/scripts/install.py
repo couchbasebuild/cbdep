@@ -286,6 +286,10 @@ class Installer:
         if "base_url" in block:
             self.handle_base_url(block.get("base_url"))
 
+        # Enable any environment overrides
+        if "set_env" in block:
+            self.handle_set_env(block.get("set_env"))
+
         actions = block.get("actions")
         if actions is None:
             logger.error("Malformed configuration file (missing 'actions')")
@@ -325,6 +329,16 @@ class Installer:
         """
 
         self.symbols['ARCH'] = arch_args[0] if self.x32 else arch_args[1]
+
+    def handle_set_env(self, env_args):
+        """
+        Sets values in the cbdep process's environment
+        """
+
+        for env_arg in env_args:
+            value = self.templatize(env_args[env_arg])
+            logger.debug(f"Setting env {env_arg} to {value}")
+            os.environ[env_arg] = value
 
     def handle_base_url(self, url):
         """
@@ -440,12 +454,10 @@ class Installer:
         """
 
         command_string = self.templatize(action["run"])
-        environment = os.environ.copy()
-        environment.update(action.get("env", {}))
 
         for command in command_string.splitlines():
             logger.debug(f"Running local command: {command}")
-            run(command, shell=True, check=True, env=environment)
+            run(command, shell=True, check=True)
 
     def do_rename_dir(self, action):
         """
