@@ -307,12 +307,12 @@ class Installer:
             elif self.cache_only:
                 # Skip any other actions if doing cache-only
                 continue
+            elif "cbdep" in action:
+                self.do_cbdep(action)
             elif "install_dir" in action:
                 self.do_install_dir(action)
             elif "unarchive" in action:
                 self.do_unarchive(action)
-            elif "cbdep" in action:
-                self.do_cbdep(action)
             elif "run" in action:
                 self.do_run(action)
             elif "rename_dir" in action:
@@ -442,11 +442,12 @@ class Installer:
 
         package = action["cbdep"]
         version = action["version"]
-        install_dir = self.templatize(action["install_dir"])
+        install_dir = self.templatize(action.get("install_dir", self.installdir))
         x32 = action.get("x32", False)
 
         installer = self.copy()
-        installer.install(package, version, x32, install_dir)
+        logger.info(f"Calling nested cbdep install -d {install_dir} {package} {version}")
+        installer.install(package, str(version), x32, self.base_url, install_dir)
 
     def do_run(self, action):
         """
