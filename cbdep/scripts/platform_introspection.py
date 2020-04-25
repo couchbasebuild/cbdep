@@ -56,5 +56,7 @@ def get_platforms():
     elif system == "windows":
         # QQQ Somehow introspect MSVC version?
         platforms.insert(0, "windows_msvc2015")
+        platforms.insert(0, "windows_msvc2017")
+        platforms.insert(0, "win")
 
     return platforms

@@ -235,7 +235,7 @@ class Installer:
 
             # Default value for PLATFORM_EXT
             # QQQ Allow overriding in config
-            if local_platform == "windows":
+            if local_platform.startswith("win"):
                 self.symbols['PLATFORM_EXT'] = "zip"
             else:
                 self.symbols['PLATFORM_EXT'] = "tar.gz"
