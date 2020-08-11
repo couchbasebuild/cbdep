@@ -134,12 +134,12 @@ class Installer:
         self.installdir = str(pathlib.Path(inst_dir).absolute())
         self.symbols['INSTALL_DIR'] = self.installdir
 
-        # Provide version components separately - split on any non-numeric
-        # characters; set up to four components (major, minor, patch, build)
-        split_re = re.compile('[^0-9]+')
+        # Provide version components separately - split on any non-alphanumeric
+        # characters; save up to four components (major, minor, patch, build)
+        split_re = re.compile('[^A-Za-z0-9]+')
         version_bits = split_re.split(self.version, maxsplit=3)
 
-        # Save a pkg_config-compatible variant of the version number
+        # Save a pkg_resources-compatible variant of the version number
         self.safe_version = '.'.join(version_bits)
         logger.debug(f"Safe version is {self.safe_version}")
 
@@ -391,9 +391,22 @@ class Installer:
         Handles a 'url' directive
         """
 
-        template = string.Template(action["url"])
-        url = template.substitute(**self.symbols)
-        localfile = str(self.cache.get(url, self.recache))
+        urls = action["url"]
+        if not isinstance(urls, list):
+            urls = [urls]
+
+        exception = None
+        for url in urls:
+            template = string.Template(url)
+            real_url = template.substitute(**self.symbols)
+
+            try:
+                localfile = str(self.cache.get(real_url, self.recache))
+                break
+            except Exception as e:
+                exception = e
+        else:
+            raise exception
 
         # Handle strange redirects
         if "scrape_html" in action:
@@ -451,7 +464,7 @@ class Installer:
 
     def do_run(self, action):
         """
-        Runs a sequence of local commands from a 'run' directive
+        Runs a sequence of local commands from a 'run' digrective
         """
 
         command_string = self.templatize(action["run"])
