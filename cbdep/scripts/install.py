@@ -134,9 +134,16 @@ class Installer:
         self.installdir = str(pathlib.Path(inst_dir).absolute())
         self.symbols['INSTALL_DIR'] = self.installdir
 
+        # Java is a special snowflake
+        is_java = package.startswith("java") or package.startswith("openjdk")
+
         # Provide version components separately - split on any non-alphanumeric
-        # characters; save up to four components (major, minor, patch, build)
-        split_re = re.compile('[^A-Za-z0-9]+')
+        # characters; save up to four components (major, minor, patch, build).
+        # Exception: For Java, use alpha characters as field delimiters also.
+        if is_java:
+            split_re = re.compile('[^0-9]+')
+        else:
+            split_re = re.compile('[^A-Za-z0-9]+')
         version_bits = split_re.split(self.version, maxsplit=3)
 
         # Save a pkg_resources-compatible variant of the version number
@@ -151,7 +158,7 @@ class Installer:
         # a build number after a + (eg., "11+28" followed by "11.0.1+13").
         # So if this is Java/OpenJDK and "patch" and "build" are empty,
         # re-arrange the numbers.
-        if package.startswith("java") or package.startswith("openjdk"):
+        if is_java:
             if not version_bits[2] and not version_bits[3]:
                 version_bits[3] = version_bits[1]
                 version_bits[1] = ''
@@ -391,6 +398,11 @@ class Installer:
         Handles a 'url' directive
         """
 
+        # Iterate through available URLs; use first successful download.
+        # TODO This probably should somehow cache the result using the
+        # first URL as a key, or similar. As it is now, if the second URL
+        # is the "right" one, then any subsequent runs of cbdep will hit
+        # the network first before discovering the right package in the cache.
         urls = action["url"]
         if not isinstance(urls, list):
             urls = [urls]
