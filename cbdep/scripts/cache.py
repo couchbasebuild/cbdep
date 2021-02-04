@@ -17,7 +17,15 @@ logger = logging.getLogger('cbdep')
 
 class Cache:
     """
-    Class to store downloaded files in a local cache
+    Class to store downloaded files in a local cache, keyed by URL.
+
+    Local cache directory structure is keyed on an MD5 checksum of the
+    URL, and contains directories named:
+        <first 2 chars of checksum> / <checksum> /
+    In each directory will be three files:
+        url - contains the input URL
+        filename - contains the filename associated with the download
+        [filename] - contains the downloaded contents
     """
 
     def __init__(self, directory):
@@ -32,18 +40,8 @@ class Cache:
         True, will always re-download the url.
         """
 
-        # Local cache directory structure is keyed on an MD5 checksum of the
-        # URL, and contains directories named:
-        #   <first 2 chars of checksum> / <checksum> /
-        # In each directory will be three files:
-        #     url - contains the input URL
-        #     filename - contains the filename associated with the download
-        #                (currently just for human reference)
-        #     [filename] - contains the downloaded contents
-
-        md5 = hashlib.md5(url.encode('utf-8')).hexdigest()
-        cachedir = self.directory / md5[0:2] / md5
-        cachefilename = cachedir / "filename"
+        cachedir = self._cachedir(url)
+        cachefilename = self._cachefilename(cachedir)
 
         # If "filename" file exists, it's a hit; read the actual filename
         # from there and return the cached content file
@@ -53,13 +51,7 @@ class Cache:
                 filename = f.readline()
                 return cachedir / filename
 
-        # Cache miss; initialize cache directory
-        if not cachedir.exists():
-            cachedir.mkdir(parents=True)
-            with open(cachedir / "url", 'w') as f:
-                f.write(url)
-
-        # Download the URL
+        # Cache miss; attempt to download the URL
         with requests.get(url, allow_redirects=True, stream=True,
                           timeout=30.0) as r:
             r.raise_for_status()
@@ -77,20 +69,36 @@ class Cache:
 
             cachefile = cachedir / filename
             try:
+                # Download file
                 with open(cachefile, 'wb') as fd:
                     for chunk in r.iter_content(chunk_size=1024):
                         fd.write(chunk)
-                with open(cachefilename, 'w') as f:
-                    f.write(filename)
+
+                self._writefilename(cachedir, filename)
+
             except:
                 if cachefile.exists():
-                    os.unlink(cachefile)
+                    cachefile.unlink()
                 if cachefilename.exists():
-                    os.unlink(cachefilename)
+                    cachefilename.unlink()
                 raise
 
         logger.debug("Downloaded file")
         return cachefile
+
+    def put(self, url, localfile):
+        """
+        Copies the specified local pathlib handle into the cache keyed by the
+        specified URL.
+        Returns pathlib handle to cached file.
+        """
+
+        cachedir = self._cachedir(url)
+        filename = localfile.name
+
+        logger.debug(f"Storing {localfile} in cache for {url}")
+        shutil.copy2(localfile, cachedir / filename)
+        self._writefilename(cachedir, filename)
 
     def report(self, url):
         """
@@ -104,4 +112,48 @@ class Cache:
         Save a local copy of a file in the cache
         """
 
-        shutil.copyfile(self.get(url), output)
+        shutil.copy2(self.get(url), output)
+
+    def _cachedir(self, url):
+        """
+        Returns pathlib handle to cache directory for given URL. Creates cachedir
+        if necessary, with initial "url" file entry.
+        """
+
+        md5 = hashlib.md5(url.encode('utf-8')).hexdigest()
+        cachedir = self.directory / md5[0:2] / md5
+
+        if not cachedir.exists():
+            logger.debug(f"Creating cache directory {cachedir}")
+            cachedir.mkdir(parents=True)
+            with open(cachedir / "url", 'w') as f:
+                f.write(url)
+
+        return cachedir
+
+    def _writefilename(self, cachedir, filename):
+        """
+        Writes the "filename" file into the appropriate cache directory. As a
+        side effect, if "filename" already exists and references a different
+        file, that (now stale) file will be removed.
+        """
+
+        cachefilename = self._cachefilename(cachedir)
+        if cachefilename.exists():
+            with open(cachefilename) as f:
+                currentfilename = f.readline()
+            if currentfilename != filename:
+                cachedfile = cachedir / currentfilename
+                if cachedfile.exists():
+                    cachedfile.unlink()
+
+        logger.debug(f"Recording filenme {filename}")
+        with open(cachefilename, 'w') as f:
+            f.write(filename)
+
+    def _cachefilename(self, cachedir):
+        """
+        Returns pathlib handle to the "filename" file in cachedir
+        """
+
+        return cachedir / "filename"

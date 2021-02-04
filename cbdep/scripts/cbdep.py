@@ -43,11 +43,11 @@ class Cbdep:
         self.cache.get(args.url, args.recache)
 
         # Output the cache filename, if requested
-        if (args.report):
+        if args.report is not None:
             self.cache.report(args.url)
 
         # Save the cached file locally, if requested
-        if (args.output is not None):
+        if args.output is not None:
             self.cache.save(args.url, args.output)
 
     @staticmethod
@@ -92,6 +92,9 @@ class Cbdep:
         )
         installer.set_cache_only(args.cache_only)
         installer.set_recache(args.recache)
+        if args.cache_local_file is not None:
+            installer.set_from_local_file(args.cache_local_file)
+            installer.set_cache_only(True)
 
         installer.install(
             args.package,
@@ -138,7 +141,7 @@ def main():
         description='Dependency Management System'
     )
     parser.add_argument(
-        "-d", "--debug", action="store_true",
+        "--debug", action="store_true",
         help="Enable debugging output"
     )
     parser.add_argument(
@@ -209,6 +212,10 @@ def main():
     install_parser.add_argument(
         "--recache", action="store_true",
         help="Re-download any installer files to cache, replacing files in cache"
+    )
+    install_parser.add_argument(
+        "--cache-local-file", type=str,
+        help="Populate cache with local file rather than downloading. Implies --cache-only."
     )
     install_parser.set_defaults(func=Cbdep.do_install)
 

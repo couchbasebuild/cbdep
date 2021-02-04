@@ -50,11 +50,14 @@ class Installer:
         self.base_url = None
         self.installdir = None
 
-        # Default, can be overridden by self.cacheOnly()
+        # Default, can be overridden by self.set_cache_only()
         self.cache_only = False
 
-        # Default, can be overridden by self.recache()
+        # Default, can be overridden by self.set_recache()
         self.recache = False
+
+        # Default, can be overridden by self.set_from_local_file()
+        self.from_local_file = None
 
         # Populated by do_url() to be the final single downloaded installer
         self.installer_file = None
@@ -105,6 +108,19 @@ class Installer:
         """
 
         self.recache = recache
+
+    def set_from_local_file(self, from_local_file):
+        """
+        If a filename is specified here, "cbdep install" will cache and use
+        that file rather than downloading anything from the internet. Disables
+        recaching.
+        """
+
+        self.from_local_file = pathlib.Path(from_local_file)
+        self.set_recache(False)
+        if not self.from_local_file.exists():
+            logger.error(f"Specified local file {from_local_file} does not exist!")
+            sys.exit(1)
 
     def get_installer_file(self):
         """
@@ -411,6 +427,11 @@ class Installer:
         for url in urls:
             template = string.Template(url)
             real_url = template.substitute(**self.symbols)
+
+            # If we've been asked to use a local file, here is where we
+            # pre-populate the cache
+            if self.from_local_file is not None:
+                self.cache.put(real_url, self.from_local_file)
 
             try:
                 localfile = str(self.cache.get(real_url, self.recache))
