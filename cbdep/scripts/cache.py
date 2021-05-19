@@ -147,7 +147,7 @@ class Cache:
                 if cachedfile.exists():
                     cachedfile.unlink()
 
-        logger.debug(f"Recording filenme {filename}")
+        logger.debug(f"Recording filename {filename}")
         with open(cachefilename, 'w') as f:
             f.write(filename)
 

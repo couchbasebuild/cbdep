@@ -60,3 +60,20 @@ def get_platforms():
         platforms.insert(0, "win")
 
     return platforms
+
+def get_arches():
+    """
+    Returns a list of possible architectures based on the current system
+    """
+
+    # Start from "machine" type, and add some synonyms
+    arches = []
+
+    arch = platform.machine().casefold()
+
+    if arch == "amd64" or arch == "x86_64":
+        arches.extend(["x86_64", "amd64", "x64"])
+    elif arch == "aarch64" or arch == "arm64":
+        arches.extend(["aarch64", "arm64"])
+
+    return arches

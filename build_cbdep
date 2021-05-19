@@ -9,8 +9,17 @@ mkdir -p build
 python3 -m venv build/venv
 . build/venv/bin/activate
 
-echo Adding pyinstaller
-pip3 install pyinstaller
+#update pip3
+pip3 install --upgrade pip
+
+# Until https://github.com/pyinstaller/pyinstaller/issues/5315 is closed,
+# point to the arm-support branch
+echo "Install pyinstaller"
+if [ `uname -m` == "arm64" ]; then
+    pip3 install https://github.com/couchbasebuild/pyinstaller/archive/refs/heads/macos11-arm64-support-cleanup.zip
+else
+    pip3 install pyinstaller
+fi
 
 echo Installing cbdep requirements
 pip3 install -r ${SCRIPTPATH}/requirements.txt
@@ -23,6 +32,6 @@ pyinstaller --log-level DEBUG \
     --workpath ${PYINSTDIR} \
     --specpath ${PYINSTDIR} \
     --distpath dist --noconfirm \
-    --onefile \
+    --onefile --clean \
     --paths ${SCRIPTPATH}/cbdep/scripts \
     ${SCRIPTPATH}/cbdep/scripts/cbdep.py

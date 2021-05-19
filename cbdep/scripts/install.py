@@ -24,11 +24,11 @@ class Installer:
     installation template yaml file
     """
 
-    def __init__(self, config, cache, platforms):
+    def __init__(self, config, cache, platforms, arches):
         """
         Base constructor for class. "config" is a YAML object,
         "cache" is the cache directory, "platforms" is a list of
-        platform names.
+        platform names; "arches" is a list of architecture names.
         """
 
         # These fields are immutable and define the installation environment
@@ -37,16 +37,23 @@ class Installer:
         self.platforms = platforms
         if not isinstance(self.platforms, list):
             self.platforms = [self.platforms]
+        self.arches = arches
+        if not isinstance(self.arches, list):
+            self.arches = [self.arches]
 
         # Things that will be substituted in all templates
         self.symbols = dict()
         self.symbols["HOME"] = str(pathlib.Path.home())
 
+        # Unlike PLATFORM, we do provide a default value for ARCH based on
+        # the first entry in self.arches. This may be overridden by if_arch
+        # directives per block.
+        self.symbols["ARCH"] = self.arches[0]
+
         # Populated by install()
         self.package = None
         self.version = None
         self.safe_version = None
-        self.x32 = None
         self.base_url = None
         self.installdir = None
 
@@ -73,14 +80,14 @@ class Installer:
         shutil.rmtree(self.temp_dir)
 
     @classmethod
-    def fromYaml(cls, yamlfile, cache, platforms):
+    def fromYaml(cls, yamlfile, cache, platforms, arches):
         """
         Constructor from a YAML configuration file
         """
 
         with open(yamlfile) as y:
             config = yaml.safe_load(y)
-        return cls(config, cache, platforms)
+        return cls(config, cache, platforms, arches)
 
     def copy(self):
         """
@@ -89,7 +96,7 @@ class Installer:
         """
 
         return Installer(
-            self.descriptor, self.cache, self.platforms
+            self.descriptor, self.cache, self.platforms, self.arches
         )
 
     def set_cache_only(self, cache_only):
@@ -130,7 +137,7 @@ class Installer:
 
         return self.installer_file
 
-    def install(self, package, version, x32, base_url, inst_dir):
+    def install(self, package, version, base_url, inst_dir):
         """
         Entry point to install a version of named package
         """
@@ -139,7 +146,6 @@ class Installer:
         self.symbols['PACKAGE'] = package
         self.version = version
         self.symbols['VERSION'] = version
-        self.x32 = x32
         self.base_url = base_url
 
         # Make install inst_dir absolute
@@ -226,10 +232,47 @@ class Installer:
         """
 
         for block in blocks:
-            if self.match_platform(block) and self.match_version(block):
+            if self.match_platform(block) and \
+               self.match_arch(block) and \
+               self.match_version(block):
                 return block
 
         return None
+
+    def _match_system(self, block, if_directive, system_values, symbol):
+        """
+        Common implementation for if_platform and if_arch.
+        """
+        if if_directive not in block:
+            return True
+
+        # Create case-insensitive map of if_directive values
+        if_directive_values = block[if_directive]
+        if not isinstance(if_directive_values, list):
+            if_directive_values = [if_directive_values]
+        lc_directive_values = {x.casefold(): x for x in if_directive_values}
+
+        matched_value = None
+        for system_value in system_values:
+            if system_value in lc_directive_values:
+                matched_value = lc_directive_values[system_value]
+                break
+
+        if matched_value is not None:
+            self.symbols[symbol] = matched_value
+            logger.debug(f"Identified {symbol} {matched_value}")
+
+            # Default value for PLATFORM_EXT - kind of a hack to put this here
+            # QQQ Allow overriding in config
+            if symbol == "PLATFORM":
+                if matched_value.startswith("win"):
+                    self.symbols['PLATFORM_EXT'] = "zip"
+                else:
+                    self.symbols['PLATFORM_EXT'] = "tar.gz"
+
+            return True
+
+        return False
 
     def match_platform(self, block):
         """
@@ -237,35 +280,27 @@ class Installer:
         platform is one of the values for that key, else false.
         If the block does not contain an if_platform key, return true
         """
-        if "if_platform" not in block:
-            return True
 
-        # Create case-insensitive map of if_platform values
-        if_platform = block["if_platform"]
-        if not isinstance(if_platform, list):
-            if_platform = [if_platform]
-        lc_platforms = {x.casefold(): x for x in if_platform}
+        return self._match_system(
+            block,
+            "if_platform",
+            self.platforms,
+            "PLATFORM"
+        )
 
-        matched_platform = None
-        for local_platform in self.platforms:
-            if local_platform in lc_platforms:
-                matched_platform = lc_platforms[local_platform]
-                break
+    def match_arch(self, block):
+        """
+        If the block contains an if_arch key, return true if the current
+        architecture is one of the values for that key, else false.
+        If the block does not contain an if_arch key, return true
+        """
 
-        if matched_platform is not None:
-            self.symbols['PLATFORM'] = matched_platform
-            logger.debug(f"Identified platform {matched_platform}")
-
-            # Default value for PLATFORM_EXT
-            # QQQ Allow overriding in config
-            if local_platform.startswith("win"):
-                self.symbols['PLATFORM_EXT'] = "zip"
-            else:
-                self.symbols['PLATFORM_EXT'] = "tar.gz"
-
-            return True
-
-        return False
+        return self._match_system(
+            block,
+            "if_arch",
+            self.arches,
+            "ARCH"
+        )
 
     def match_version(self, block):
         """
@@ -300,10 +335,6 @@ class Installer:
         Given a single block from the config, execute all actions
         sequentially
         """
-
-        # Set ARCH in the symbol table
-        if "set_arch" in block:
-            self.handle_set_arch(block.get("set_arch"))
 
         # Set BASE_URL in the symbol table
         if "base_url" in block:
@@ -345,13 +376,6 @@ class Installer:
                     "Malformed configuration file (missing action directive)"
                 )
                 sys.exit(1)
-
-    def handle_set_arch(self, arch_args):
-        """
-        Sets ARCH in the symbol table based on the current value of x32
-        """
-
-        self.symbols['ARCH'] = arch_args[0] if self.x32 else arch_args[1]
 
     def handle_set_env(self, env_args):
         """
@@ -489,11 +513,10 @@ class Installer:
         package = action["cbdep"]
         version = action["version"]
         install_dir = self.templatize(action.get("install_dir", self.installdir))
-        x32 = action.get("x32", False)
 
         installer = self.copy()
         logger.info(f"Calling nested cbdep install -d {install_dir} {package} {version}")
-        installer.install(package, str(version), x32, self.base_url, install_dir)
+        installer.install(package, str(version), self.base_url, install_dir)
 
     def do_run(self, action):
         """

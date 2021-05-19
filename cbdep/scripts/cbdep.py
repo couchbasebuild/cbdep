@@ -13,7 +13,7 @@ import yaml
 
 from cache import Cache
 from install import Installer
-from platform_introspection import get_platforms
+from platform_introspection import get_arches, get_platforms
 
 from cbbuild.util import update_tool_check
 
@@ -56,8 +56,9 @@ class Cbdep:
         Display introspected platform information
         """
 
-        logger.debug("Determining platform...")
+        logger.debug("Determining platform and arch...")
         print(get_platforms())
+        print(get_arches())
 
     @staticmethod
     def configpath(args):
@@ -88,7 +89,10 @@ class Cbdep:
         installdir = str(pathlib.Path(installdir).resolve())
 
         installer = Installer.fromYaml(
-            self.configpath(args), self.cache, args.platform
+            self.configpath(args),
+            self.cache,
+            args.platform,
+            "x86" if args.x32 else args.arch
         )
         installer.set_cache_only(args.cache_only)
         installer.set_recache(args.recache)
@@ -99,7 +103,6 @@ class Cbdep:
         installer.install(
             args.package,
             args.version,
-            args.x32,
             args.base_url,
             installdir
         )
@@ -149,6 +152,12 @@ def main():
         default=get_platforms(),
         help="Override detected platform"
     )
+    parser.add_argument(
+        "-a", "--arch", type=str,
+        default=get_arches(),
+        help="Override detected architecture"
+    )
+
     subparsers = parser.add_subparsers()
 
     cache_parser = subparsers.add_parser(
