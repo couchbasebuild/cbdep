@@ -18,7 +18,7 @@ echo "Install pyinstaller"
 if [ `uname -m` == "arm64" ]; then
     pip3 install https://github.com/couchbasebuild/pyinstaller/archive/refs/heads/macos11-arm64-support-cleanup.zip
 else
-    pip3 install pyinstaller
+    pip3 install pyinstaller==4.2
 fi
 
 echo Installing cbdep requirements
