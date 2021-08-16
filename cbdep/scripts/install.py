@@ -537,8 +537,11 @@ class Installer:
 
         top_dir = (pathlib.Path(self.installdir) /
                    self.templatize(action["rename_dir"]))
-        top_dir.rename(pathlib.Path(self.installdir) /
+        target_dir = (pathlib.Path(self.installdir) /
                        f"{self.package}-{self.version}")
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        top_dir.rename(target_dir)
 
     def templatize(self, template):
         """
