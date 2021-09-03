@@ -5,9 +5,10 @@ SCRIPTPATH=`pwd -P`
 popd > /dev/null
 
 echo Setting up Python virtual environment
-mkdir -p build
-python3 -m venv build/venv
-. build/venv/bin/activate
+BUILDDIR="$(pwd)/build"
+mkdir -p "${BUILDDIR}"
+python3 -m venv "${BUILDDIR}/venv"
+. "${BUILDDIR}/venv/bin/activate"
 
 # update pip3
 pip3 install --upgrade pip
@@ -25,6 +26,18 @@ pip3 install pyinstaller==${PYINSTALLER_VERSION}
 echo Installing cbdep requirements
 pip3 install -r ${SCRIPTPATH}/requirements.txt
 
+# Customize _buildversion.py if build info available in environment
+if [ ! -z "${VERSION}" -a ! -z "${BLD_NUM}" ]; then
+    VERSIONPATH="${BUILDDIR}/version"
+    mkdir -p "${VERSIONPATH}"
+    cat <<EOF > "${VERSIONPATH}/_buildversion.py"
+__version__ = "${VERSION}"
+__build__ = "${BLD_NUM}"
+EOF
+else
+    VERSIONPATH=""
+fi
+
 echo Compiling cbdep
 PYINSTDIR=$(pwd)/build/pyinstaller
 mkdir -p ${PYINSTDIR}
@@ -34,5 +47,5 @@ pyinstaller --log-level DEBUG \
     --specpath ${PYINSTDIR} \
     --distpath dist --noconfirm \
     --onefile --clean \
-    --paths ${SCRIPTPATH}/cbdep/scripts \
+    --paths "${VERSIONPATH}:${SCRIPTPATH}/cbdep/scripts" \
     ${SCRIPTPATH}/cbdep/scripts/cbdep.py

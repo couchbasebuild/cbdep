@@ -15,6 +15,7 @@ from cache import Cache
 from install import Installer
 from platform_introspection import get_arches, get_platforms
 
+from _version import __version__, __build__
 from cbbuild.util import update_tool_check
 
 
@@ -156,6 +157,11 @@ def main():
         "-a", "--arch", type=str,
         default=get_arches(),
         help="Override detected architecture"
+    )
+    parser.add_argument(
+        "-V", "--version", action="version",
+        help="Display cbdep version information",
+        version=f"cbdep version {__version__} (build {__build__})"
     )
 
     subparsers = parser.add_subparsers()
