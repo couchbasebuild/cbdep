@@ -9,17 +9,18 @@ mkdir -p build
 python3 -m venv build/venv
 . build/venv/bin/activate
 
-#update pip3
+# update pip3
 pip3 install --upgrade pip
 
-# Until https://github.com/pyinstaller/pyinstaller/issues/5315 is closed,
-# point to the arm-support branch
+# aarch64 requires a very new Pyinstaller, but our old centos6 x86_64
+# agent breaks with anything newer than 4.2
 echo "Install pyinstaller"
-if [ `uname -m` == "arm64" ]; then
-    pip3 install https://github.com/couchbasebuild/pyinstaller/archive/refs/heads/macos11-arm64-support-cleanup.zip
+if [ `uname -m` != "x86_64" ]; then
+    PYINSTALLER_VERSION=4.5.1
 else
-    pip3 install pyinstaller==4.2
+    PYINSTALLER_VERSION=4.2
 fi
+pip3 install pyinstaller==${PYINSTALLER_VERSION}
 
 echo Installing cbdep requirements
 pip3 install -r ${SCRIPTPATH}/requirements.txt

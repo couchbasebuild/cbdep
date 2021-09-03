@@ -15,6 +15,8 @@ import yaml
 from pkg_resources import Requirement
 from subprocess import run
 
+from platform_introspection import get_default_arches
+
 logger = logging.getLogger("cbdep")
 
 
@@ -44,11 +46,6 @@ class Installer:
         # Things that will be substituted in all templates
         self.symbols = dict()
         self.symbols["HOME"] = str(pathlib.Path.home())
-
-        # Unlike PLATFORM, we do provide a default value for ARCH based on
-        # the first entry in self.arches. This may be overridden by if_arch
-        # directives per block.
-        self.symbols["ARCH"] = self.arches[0]
 
         # Populated by install()
         self.package = None
@@ -292,8 +289,14 @@ class Installer:
         """
         If the block contains an if_arch key, return true if the current
         architecture is one of the values for that key, else false.
-        If the block does not contain an if_arch key, return true
+        If the block contains a default_arches key, behave as though
+        if_arch existed with a platform-dependent default set of arches.
+        If the block does not contain either key, return true
         """
+
+        if "default_arches" in block:
+            block["if_arch"] = get_default_arches()
+            logger.debug(f"Set if_arch: {block['if_arch']}")
 
         return self._match_system(
             block,
