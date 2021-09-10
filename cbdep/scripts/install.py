@@ -497,16 +497,27 @@ class Installer:
         Unarchives the downloaded file
         """
 
-        unarchive_dir = self.installdir
+        dest_dir = self.installdir
 
         if "add_dir" in action:
             new_dir = (pathlib.Path(self.installdir) /
                        self.templatize(action["add_dir"]))
             os.makedirs(new_dir, exist_ok=True)
-            unarchive_dir = str(new_dir)
+            dest_dir = str(new_dir)
 
-        logger.info(f"Unpacking archive into {unarchive_dir}")
-        shutil.unpack_archive(self.installer_file, unarchive_dir)
+        # We extract to a temp dir and move the results, to prevent
+        # interruptions resulting in partially complete destinations
+        pathlib.Path(dest_dir).mkdir(parents=True, exist_ok=True)
+        temp_dir = tempfile.TemporaryDirectory(prefix=dest_dir + os.path.sep)
+
+        logger.info(f"Unpacking archive to {temp_dir.name}")
+        shutil.unpack_archive(self.installer_file, temp_dir.name)
+
+        # We don't know what our extracted content is called yet, so let's
+        # look inside the temp dir and move whatever we find
+        for path in list(map(lambda subdir: pathlib.Path(temp_dir.name)/subdir, os.listdir(temp_dir.name))):
+            logger.info(f"Moving {path} to {dest_dir}")
+            shutil.move(path, dest_dir)
 
     def do_cbdep(self, action):
         """
