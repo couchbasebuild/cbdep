@@ -372,8 +372,6 @@ class Installer:
                 self.do_unarchive(action)
             elif "run" in action:
                 self.do_run(action)
-            elif "rename_dir" in action:
-                self.do_rename_dir(action)
             else:
                 logger.error(
                     "Malformed configuration file (missing action directive)"
@@ -497,27 +495,46 @@ class Installer:
         Unarchives the downloaded file
         """
 
-        dest_dir = self.installdir
+        install_dir = pathlib.Path(self.installdir)
+        install_dir.mkdir(exist_ok = True, parents = True)
 
-        if "add_dir" in action:
-            new_dir = (pathlib.Path(self.installdir) /
-                       self.templatize(action["add_dir"]))
-            os.makedirs(new_dir, exist_ok=True)
-            dest_dir = str(new_dir)
+        args = action["unarchive"]
 
-        # We extract to a temp dir and move the results, to prevent
-        # interruptions resulting in partially complete destinations
-        pathlib.Path(dest_dir).mkdir(parents=True, exist_ok=True)
-        temp_dir = tempfile.TemporaryDirectory(prefix=dest_dir + os.path.sep)
+        # The standardized final location for the package. This
+        # may already exist!
+        if "target_dir" in args:
+            target_dir_name = self.templatize(args["target_dir"])
+        else:
+            target_dir_name = f"{self.package}-{self.version}"
+        target_dir = install_dir / target_dir_name
 
-        logger.info(f"Unpacking archive to {temp_dir.name}")
-        shutil.unpack_archive(self.installer_file, temp_dir.name)
+        # We extract the archive to a temporary directory
+        temp_dir_handle = tempfile.TemporaryDirectory(dir = install_dir)
+        temp_dir = pathlib.Path(temp_dir_handle.name)
+        unpack_dir = temp_dir / 'unpack'
+        unpack_dir.mkdir()
+        logger.info(f"Unpacking archive to {unpack_dir}")
+        shutil.unpack_archive(self.installer_file, unpack_dir)
 
-        # We don't know what our extracted content is called yet, so let's
-        # look inside the temp dir and move whatever we find
-        for path in list(map(lambda subdir: pathlib.Path(temp_dir.name)/subdir, os.listdir(temp_dir.name))):
-            logger.info(f"Moving {path} to {dest_dir}")
-            shutil.move(path, dest_dir)
+        # Now we want to find the single final directory we care
+        # about from the unpacked archive.
+        if "toplevel_dir" in args:
+            final_dir = unpack_dir / self.templatize(args["toplevel_dir"])
+        elif "no_toplevel_dir" in args:
+            # The unpacked directory *itself* is the final dir
+            final_dir = unpack_dir
+        else:
+            # The archive contained a directory with the expected
+            # final name, as specified by target_dir_name
+            final_dir = unpack_dir / target_dir_name
+
+        # Finally as atomically as possible, move the existing
+        # target directory out of the way (if it exists) and move
+        # the final directory to the target directory.
+        if target_dir.exists():
+            target_dir.rename(temp_dir / "recycle")
+        final_dir.rename(target_dir)
+        logger.info(f"Moved archive contents to {target_dir}")
 
     def do_cbdep(self, action):
         """
@@ -542,20 +559,6 @@ class Installer:
         for command in command_string.splitlines():
             logger.debug(f"Running local command: {command}")
             run(command, shell=True, check=True)
-
-    def do_rename_dir(self, action):
-        """
-        Renames a specified top-level directory to the standardized
-        ${PACKAGE}-${VERSION}
-        """
-
-        top_dir = (pathlib.Path(self.installdir) /
-                   self.templatize(action["rename_dir"]))
-        target_dir = (pathlib.Path(self.installdir) /
-                       f"{self.package}-{self.version}")
-        if target_dir.exists():
-            shutil.rmtree(target_dir)
-        top_dir.rename(target_dir)
 
     def templatize(self, template):
         """
