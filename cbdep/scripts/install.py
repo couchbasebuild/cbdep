@@ -521,7 +521,7 @@ class Installer:
         temp_dir = pathlib.Path(temp_dir_handle.name)
         unpack_dir = temp_dir / 'unpack'
         unpack_dir.mkdir()
-        logger.info(f"Unpacking archive to {unpack_dir}")
+        logger.info(f"Unpacking archive to {target_dir}")
         shutil.unpack_archive(self.installer_file, unpack_dir)
 
         # Now we want to find the single final directory we care
@@ -542,7 +542,6 @@ class Installer:
         if target_dir.exists():
             target_dir.rename(temp_dir / "recycle")
         final_dir.rename(target_dir)
-        logger.info(f"Moved archive contents to {target_dir}")
 
     def do_cbdep(self, action):
         """
