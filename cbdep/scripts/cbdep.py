@@ -22,9 +22,11 @@ from cbbuild.util import update_tool_check
 # Set up logging and handler
 logger = logging.getLogger('cbdep')
 logger.setLevel(logging.DEBUG)
-
-ch = logging.StreamHandler()
-logger.addHandler(ch)
+formatter = logging.Formatter('%(levelname)s: %(message)s')
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+handler.setLevel(logging.INFO)
+logger.addHandler(handler)
 
 
 class Cbdep:
@@ -254,7 +256,7 @@ def main():
 
     # Set logging to debug level on stream handler if --debug was set
     if args.debug:
-        ch.setLevel(logging.DEBUG)
+        handler.setLevel(logging.DEBUG)
 
     # Check that a command was specified
     if "func" not in args:
