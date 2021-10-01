@@ -156,9 +156,10 @@ class Installer:
         # Java is a special snowflake
         is_java = package.startswith("java") or package.startswith("openjdk")
 
-        # Provide version components separately - split on any non-alphanumeric
+        # Provide version components separately - split on any non-numeric
         # characters; save up to four components (major, minor, patch, build).
-        # Exception: For Java, use alpha characters as field delimiters also.
+        # Exception: For Java, include alpha characters in numeric slots;
+        # eg., "8u292+10" will be split into "8u292" and "10".
         if is_java:
             split_re = re.compile('[^0-9]+')
         else:
@@ -169,18 +170,18 @@ class Installer:
         self.safe_version = '.'.join(version_bits)
         logger.debug(f"Safe version is {self.safe_version}")
 
-        # Make sure version_bits is 4 elements long
-        version_bits = (version_bits + 4 * [''])[:4]
-
-        # Special nonsense for Java - version numbers have either 1 or 3
-        # component (eg. "11" followed by "11.0.1"), but then also have
-        # a build number after a + (eg., "11+28" followed by "11.0.1+13").
-        # So if this is Java/OpenJDK and "patch" and "build" are empty,
-        # re-arrange the numbers.
-        if is_java:
-            if not version_bits[2] and not version_bits[3]:
-                version_bits[3] = version_bits[1]
-                version_bits[1] = ''
+        # Special nonsense for Java - version numbers have 1 or 3
+        # components (eg. "11" followed by "11.0.1", or old ones like
+        # "8u292" which is a single component), but then also have a
+        # build number after a + (eg., "11+28" followed by "11.0.1+13",
+        # or old ones like "8u292+10"). We'd like to know that the
+        # number after + is always in the "build" slot, so center-pad
+        # the numbers.
+        if is_java and len(version_bits) == 2:
+            version_bits = [version_bits[0], '', '', version_bits[1]]
+        else:
+            # Make sure version_bits is exactly 4 elements long
+            version_bits = (version_bits + 4 * [''])[:4]
 
         self.symbols['VERSION_MAJOR'] = version_bits[0]
         self.symbols['VERSION_MINOR'] = version_bits[1]
