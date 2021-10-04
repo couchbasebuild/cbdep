@@ -15,10 +15,11 @@ import yaml
 from pkg_resources import Requirement
 from subprocess import run
 
+import zipfile_with_permissions
 from platform_introspection import get_default_arches
 
 logger = logging.getLogger("cbdep")
-
+zipfile_with_permissions.register()
 
 class Installer:
     """
