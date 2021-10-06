@@ -504,7 +504,7 @@ class Installer:
 
         # The standardized final location for the package. This
         # may already exist!
-        if "target_dir" in args:
+        if args and "target_dir" in args:
             target_dir_name = self.templatize(args["target_dir"])
         else:
             target_dir_name = f"{self.package}-{self.version}"
@@ -520,9 +520,9 @@ class Installer:
 
         # Now we want to find the single final directory we care
         # about from the unpacked archive.
-        if "toplevel_dir" in args:
+        if args and "toplevel_dir" in args:
             final_dir = unpack_dir / self.templatize(args["toplevel_dir"])
-        elif "no_toplevel_dir" in args:
+        elif args and "no_toplevel_dir" in args:
             # The unpacked directory *itself* is the final dir
             final_dir = unpack_dir
         else:
