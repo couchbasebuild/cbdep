@@ -6,6 +6,14 @@ import platform
 
 _platforms = None
 
+def override_platforms(platforms):
+    """
+    Set platform to a specific value or values, to suppress introspection
+    """
+
+    global _platforms
+    _platforms = platforms
+
 def get_platforms():
     """
     Returns a list of increasingly-generic identifiers for the current
@@ -51,7 +59,6 @@ def get_platforms():
             _platforms.insert(0, f"{dist_id}{dist_ver}")
             _platforms.insert(0, f"{dist_id}-{dist_ver}")
 
-
     elif system == "darwin":
         _platforms.insert(0, "macosx")
         _platforms.insert(0, "macos")
@@ -83,7 +90,7 @@ def get_arches():
 
     return arches
 
-def get_default_arches():
+def get_default_arches(classic_cbdeps=False):
     """
     Returns a platform-dependent value suitable for if_arch directives.
     Important: this is a list of arch names most frequently used in *package*
@@ -94,12 +101,14 @@ def get_default_arches():
     "64-bit Intel", and "64-bit ARM" on each OS.
     """
 
-    if "linux" in get_platforms():
-        return ["x86", "x86_64", "aarch64"]
-    elif "windows" in get_platforms():
-        return ["x86", "x86_64"]
-    elif "darwin" in get_platforms():
-        return ["x86_64", "arm64"]
-    else:
-        # Probably shouldn't happen, but we definitely don't know any defaults
-        return []
+    for plat in get_platforms():
+        if plat.startswith("win"):
+            if classic_cbdeps:
+                return ["x86", "amd64"]
+            else:
+                return ["x86", "x86_64"]
+        elif "darwin" in plat or "mac" in plat:
+            return ["x86_64", "arm64"]
+
+    # Didn't find anything else, so return the list for Linux
+    return ["x86", "x86_64", "aarch64"]

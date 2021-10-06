@@ -13,10 +13,9 @@ import yaml
 
 from cache import Cache
 from install import Installer
-from platform_introspection import get_arches, get_platforms
+from platform_introspection import get_arches, get_platforms, override_platforms
 
 from _version import __version__, __build__
-from cbbuild.util import update_tool_check
 
 
 # Set up logging and handler
@@ -94,7 +93,7 @@ class Cbdep:
         installer = Installer.fromYaml(
             self.configpath(args),
             self.cache,
-            args.platform,
+            get_platforms(),
             "x86" if args.x32 else args.arch
         )
         installer.set_cache_only(args.cache_only)
@@ -152,8 +151,8 @@ def main():
     )
     parser.add_argument(
         "-p", "--platform", type=str,
-        default=get_platforms(),
-        help="Override detected platform"
+        default=None,
+        help="Override detected platform (may be comma-separated list)"
     )
     parser.add_argument(
         "-a", "--arch", type=str,
@@ -251,12 +250,14 @@ def main():
 
     args = parser.parse_args()
 
-    tool_name = os.path.basename(sys.argv[0])
-    #update_tool_check.check_for_update(tool_name, args)
-
     # Set logging to debug level on stream handler if --debug was set
     if args.debug:
         handler.setLevel(logging.DEBUG)
+
+    # Override platform if specified
+    if args.platform is not None:
+        logger.debug(f"Overriding platform to {args.platform}")
+        override_platforms(args.platform.split(','))
 
     # Check that a command was specified
     if "func" not in args:

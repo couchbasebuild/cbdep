@@ -291,13 +291,19 @@ class Installer:
         """
         If the block contains an if_arch key, return true if the current
         architecture is one of the values for that key, else false.
-        If the block contains a default_arches key, behave as though
-        if_arch existed with a platform-dependent default set of arches.
+        If the block contains a default_arches or default_classic_arches key,
+        behave as though if_arch existed with a platform-dependent default
+        set of arches.
         If the block does not contain either key, return true
         """
 
+        arches = None
         if "default_arches" in block:
-            block["if_arch"] = get_default_arches()
+            arches = get_default_arches()
+        elif "default_classic_arches" in block:
+            arches = get_default_arches(classic_cbdeps=True)
+        if arches is not None:
+            block["if_arch"] = arches
             logger.debug(f"Set if_arch: {block['if_arch']}")
 
         return self._match_system(
