@@ -8,11 +8,5 @@ unset LANG
 source env/bin/activate
 pip3 install -r ../../requirements.txt
 pip3 install pytest pytest-cov
-echo
-echo @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo "Running unit tests"
-echo "Note: 'test_working_install' may take several minutes, especially the first time"
-echo @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo
 coverage run --source=cbdep.cbdep.scripts --module pytest -k "${TESTS-test}" --verbose . && coverage report --show-missing
 deactivate

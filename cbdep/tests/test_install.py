@@ -1,12 +1,15 @@
+import logging
 import os
 import sys
 import pytest
+import tempfile
 from hashlib import md5
-from pathlib import PosixPath
+from pathlib import Path
 from shutil import rmtree
 sys.path.append('../scripts')
 from cbdep.cbdep.scripts.cache import Cache
 from cbdep.cbdep.scripts.install import Installer
+import cbdep.cbdep.scripts.platform_introspection as plat
 
 wrong_platform_package = {
     "name": "java",
@@ -23,6 +26,9 @@ missing_package = {
     "hash": "0000",
 }
 
+def package_name(package):
+    return package.get("name")
+
 install_packages = [
     {
         "name": "dotnet-core-runtime",
@@ -31,6 +37,7 @@ install_packages = [
         "arch": "x64",
         "filename": "dotnet-runtime-5.0.10-linux-x64.tar.gz",
         "hash": "ccd32f9a26d3f3d019ed00b9d0887efc",
+        "final_file": "dotnet"
     },
     {
         "name": "golang",
@@ -40,6 +47,7 @@ install_packages = [
         "filename": "go1.16.5.linux-amd64.tar.gz",
         "install_dir": "go1.16.5",
         "hash": "76ff30daf15ef09e10a54be7b8a5f01b",
+        "final_file": "bin/go"
     },
     {
         # random cbddep
@@ -48,21 +56,15 @@ install_packages = [
         "platform": "linux",
         "version": "7.0.2-6512",
         "hash": "0bbb2376f42848451b6898247aa85793",
+        "final_file": "jars/ini4j-0.5.4.jar"
     },
     {
-        # java with its special cases
-        "name": "java",
+        "name": "openjdk",
         "platform": "linux",
-        "version": "11.0.3",
-        "filename": "jdk-11.0.3_linux-x64_bin.tar.gz",
-        "hash": "9bdefa0ac6378798643934ea6a065fe1"
-    },
-    {
-        "name": "java",
-        "platform": "linux",
-        "version": "8u181",
-        "filename": "jdk-8u181-linux-x64.tar.gz",
-        "hash": "fb5902b789ef52fbb5852b909b6f19b7"
+        "version": "11.0.12+7",
+        "filename": "OpenJDK11U-jdk_x64_linux_hotspot_11.0.12_7.tar.gz",
+        "hash": "4402d15b299b48172d1577b374392e63",
+        "final_file": "bin/java"
     },
     {
         # classic cbdep
@@ -71,7 +73,8 @@ install_packages = [
         "platform": "centos7",
         "version": "1.74.0-cb1",
         "filename": "boost-centos7-x86_64-1.74.0-cb1.tgz",
-        "hash": "74e40ef0dddb0be854b91054c4120706"
+        "hash": "74e40ef0dddb0be854b91054c4120706",
+        "final_file": "include/boost/version.hpp"
     },
     {
         # something with install_dir
@@ -81,21 +84,24 @@ install_packages = [
         "version": "8.0.2-cb1",
         "install_dir": "/tmp/php/php-zts-8.0.2-cb1",
         "filename": "php-zts-linux-x86_64-8.0.2-cb1.tgz",
-        "hash": "fe52a6efd938d5d3ed4c5b9031477fe9"
+        "hash": "fe52a6efd938d5d3ed4c5b9031477fe9",
+        "final_file": "bin/php"
     },
     {
-        # something with run
-        "name": "jq",
+        # something with run and no_toplevel_dir
+        "name": "docker",
         "platform": "linux",
-        "version": "1.6",
-        "filename": "jq-linux64",
-        "hash": "5f30d82f019df2c03e074cbb1551533d"
+        "version": "20.10.3",
+        "filename": "docker-20.10.3.tgz",
+        "hash": "4bb3ff2457b540995ddae3124f06d40a",
+        "final_file": "bin/docker"
     }
 ]
 config = "../../cbdep.config"
 
-config = PosixPath(config)
-wd = PosixPath("/tmp/cbdep-testing")
+config = Path(config)
+wd = Path(tempfile.mkdtemp())
+logger = logging.getLogger()
 
 def clear_wd():
     rmtree(wd, ignore_errors=True)
@@ -108,9 +114,8 @@ class TestInstaller:
 
     def test___del__(self):
         installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
-        tempdir = PosixPath(installer.temp_dir)
-        if not os.path.exists(tempdir):
-            tempdir.mkdir()
+        tempdir = Path(installer.temp_dir)
+        tempdir.mkdir(exist_ok=True)
         assert tempdir.exists()
         del installer
         assert tempdir.exists() == False
@@ -135,7 +140,7 @@ class TestInstaller:
 
     def test_set_from_local_file(self):
         installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
-        PosixPath("/tmp/bar").touch()
+        Path("/tmp/bar").touch()
         installer.set_recache(True)
         installer.set_from_local_file("/tmp/bar")
         assert installer.recache == False
@@ -155,19 +160,30 @@ class TestInstaller:
         installer.symbols["NUMERIC"] = "123"
         assert installer.templatize("${ALPHA}-${NUMERIC}") == "ABC-123"
 
-    def test_working_install(self):
+    # Fixture to parameterize test_working_install() for each package config
+    @pytest.fixture(params=install_packages, ids=package_name)
+    def package(self, request):
+        return request.param
+
+    def test_working_install(self, caplog, package):
+        caplog.set_level(logging.DEBUG)
         clear_wd()
-        assert len(install_packages) > 0
-        for package in install_packages:
-            installer = Installer.fromYaml(config, Cache(wd), package["platform"], package.get("arch", "x86_64"))
-            installer.install(package["name"], package["version"], package.get("base_url", ""), wd/"install")
-            fn = wd / package["hash"][0:2] / package["hash"] / package.get("filename", f"{package['name']}-{package['version']}.tar.gz")
-            assert os.path.isfile(fn)
-            install_dir = package.get("install_dir", f"{package['name']}-{package['version']}")
-            if not os.path.isabs(install_dir):
-                install_dir = wd / "install" / install_dir
-            assert os.path.isdir(install_dir)
-            rmtree(install_dir, ignore_errors=True)
+        logger.info(f"Testing package '{package}'")
+        installer = Installer.fromYaml(config, Cache(wd), package["platform"], package.get("arch", plat.get_arches()))
+        installer.install(package["name"], package["version"], package.get("base_url", ""), wd/"install")
+        fn = wd / package["hash"][0:2] / package["hash"] / package.get("filename", f"{package['name']}-{package['version']}.tar.gz")
+        logger.debug(f"    Checking for downloaded file '{fn}'")
+        assert fn.is_file()
+        install_dir = Path(package.get("install_dir", f"{package['name']}-{package['version']}"))
+        if not install_dir.is_absolute():
+            install_dir = wd / "install" / install_dir
+        logger.debug(f"    Checking for install dir '{install_dir}'")
+        assert install_dir.is_dir()
+        final_filename = package.get("final_file", None)
+        if final_filename is not None:
+            logger.debug(f"    Checking for final file '{final_filename}'")
+            assert (install_dir / final_filename).is_file()
+        rmtree(install_dir, ignore_errors=True)
 
     def test_broken_install(self):
         clear_wd()
@@ -199,7 +215,7 @@ class TestInstaller:
         installer.symbols["foo"] = "bar"
         installer.handle_fixed_dir({ "fixed_dir": str(wd/"missing") })
         assert installer.handle_fixed_dir({ "fixed_dir": str(wd/"missing") }) == False
-        PosixPath(wd/"present").touch()
+        (wd/"present").touch()
         assert installer.handle_fixed_dir({ "fixed_dir": str(wd/"present") }) == True
 
     def test_do_install_dir(self):

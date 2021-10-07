@@ -1,8 +1,8 @@
-import os
 import pytest
 import requests
+import tempfile
 from hashlib import md5
-from pathlib import PosixPath
+from pathlib import Path
 from shutil import rmtree
 from urllib.parse import urljoin
 from cbdep.cbdep.scripts.cache import Cache
@@ -26,7 +26,7 @@ name_sha = {
     "ubuntu": md5(url["ubuntu"].encode('utf-8')).hexdigest()
 }
 
-cachedir = PosixPath("/tmp/foo")
+cachedir = Path(tempfile.mkdtemp())
 
 class TestCache:
     cache = Cache(cachedir)
@@ -37,7 +37,7 @@ class TestCache:
     def test__cachedir(self):
         rmtree(cachedir/name_sha["centos"][0:2], ignore_errors=True)
         path = cachedir/name_sha["centos"][0:2]/name_sha["centos"]
-        urlfile = os.path.join(path, "url")
+        urlfile = path / "url"
         assert self.cache._cachedir(url["centos"]) == path
         assert open(urlfile).read() == url["centos"]
 
@@ -57,7 +57,7 @@ class TestCache:
         stdout = StringIO()
         with redirect_stdout(stdout):
             self.cache.report(url["centos"])
-        assert stdout.getvalue().strip() == os.path.join(str(cachedir/name_sha["centos"][0:2]/name_sha["centos"]), url["centos"].split("/")[-1])
+        assert stdout.getvalue().strip() == str(cachedir/name_sha["centos"][0:2]/name_sha["centos"]/url["centos"].split("/")[-1])
 
     def test_put(self):
         rmtree(cachedir, ignore_errors=True)
