@@ -13,7 +13,7 @@ import yaml
 
 from cache import Cache
 from install import Installer
-from platform_introspection import get_arches, get_platforms, override_platforms
+from platform_introspection import get_arches, get_platforms, override_platforms, override_arch
 
 from _version import __version__, __build__
 
@@ -76,7 +76,19 @@ class Cbdep:
             else:
                 # running live
                 mydir = pathlib.Path.home()
-            yamlfile = str(mydir / "cbdep.config")
+            configfile = mydir / "cbdep.config"
+            # For convenience mostly when debugging, if the normal
+            # cbdep.config can't be found, check the cwd. If that can't
+            # be found either, though, return the normal path so the
+            # error message makes sense
+            if not configfile.exists():
+                pwd_configfile = pathlib.Path.cwd() / "cbdep.config"
+                if pwd_configfile.exists():
+                    logger.debug("Note: using cbdep.config from pwd")
+                    configfile = pwd_configfile
+
+            yamlfile = str(configfile)
+
 
         return yamlfile
 
@@ -94,7 +106,7 @@ class Cbdep:
             self.configpath(args),
             self.cache,
             get_platforms(),
-            "x86" if args.x32 else args.arch
+            "x86" if args.x32 else get_arches()
         )
         installer.set_cache_only(args.cache_only)
         installer.set_recache(args.recache)
@@ -136,7 +148,7 @@ def main():
 
     # PyInstaller binaries get LD_LIBRARY_PATH set for them, and that
     # can have unwanted side-effects for our own subprocesses. Remove
-    # that here - it can still be set by an env: entry in cbdep.config
+    # that here - it can still be set by a set_env: entry in cbdep.config
     # for an install directive.
     # This needs to be done very early - even the call to get_platforms()
     # below indirectly shells out to lsb_release.
@@ -155,8 +167,8 @@ def main():
         help="Override detected platform (may be comma-separated list)"
     )
     parser.add_argument(
-        "-a", "--arch", type=str,
-        default=get_arches(),
+        "-a", "--arch", "--processor", type=str,
+        default=None,
         help="Override detected architecture"
     )
     parser.add_argument(
@@ -253,6 +265,11 @@ def main():
     # Set logging to debug level on stream handler if --debug was set
     if args.debug:
         handler.setLevel(logging.DEBUG)
+
+    # Override architecture if specified
+    if args.arch is not None:
+        logger.debug(f"Overriding architecture to {args.arch}")
+        override_arch(args.arch)
 
     # Override platform if specified
     if args.platform is not None:

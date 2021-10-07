@@ -259,7 +259,7 @@ class Installer:
 
         if matched_value is not None:
             self.symbols[symbol] = matched_value
-            logger.debug(f"Identified {symbol} {matched_value}")
+            logger.debug(f"Matched {symbol} {matched_value}")
 
             # Default value for PLATFORM_EXT - kind of a hack to put this here
             # QQQ Allow overriding in config

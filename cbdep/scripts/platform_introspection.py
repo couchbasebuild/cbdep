@@ -5,6 +5,10 @@ Functions for determining current platform information
 import platform
 
 _platforms = None
+_arch = None
+
+_intel_arches = ["x86_64", "amd64", "x64"]
+_arm_arches = ["aarch64", "arm64"]
 
 def override_platforms(platforms):
     """
@@ -13,6 +17,15 @@ def override_platforms(platforms):
 
     global _platforms
     _platforms = platforms
+
+def override_arch(arch):
+    """
+    Set initial architecture to specific value - additional synonyms may
+    still be added
+    """
+
+    global _arch
+    _arch = arch
 
 def get_platforms():
     """
@@ -78,17 +91,22 @@ def get_arches():
     Returns a list of possible architectures based on the current system
     """
 
-    # Start from "machine" type, and add some synonyms
-    arches = []
+    global _arch, _intel_arches, _arm_arches
 
-    arch = platform.machine().casefold()
+    # Start from "machine" type (possibly overridden), then add some synonyms
+    if _arch is not None:
+        arch = _arch
+    else:
+        arch = platform.machine().casefold()
 
-    if arch == "amd64" or arch == "x86_64":
-        arches.extend(["x86_64", "amd64", "x64"])
-    elif arch == "aarch64" or arch == "arm64":
-        arches.extend(["aarch64", "arm64"])
-
-    return arches
+    # If we recognize this as being Intel or ARM, return a set of common
+    # synonyms
+    if arch in _intel_arches:
+        return _intel_arches.copy()
+    if arch in _arm_arches:
+        return _arm_arches.copy()
+    # Otherwise, just return what we've got
+    return [arch]
 
 def get_default_arches(classic_cbdeps=False):
     """

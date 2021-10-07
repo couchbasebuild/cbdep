@@ -28,6 +28,7 @@ install_packages = [
         "name": "dotnet-core-runtime",
         "platform": "linux",
         "version": "5.0.10",
+        "arch": "x64",
         "filename": "dotnet-runtime-5.0.10-linux-x64.tar.gz",
         "hash": "ccd32f9a26d3f3d019ed00b9d0887efc",
     },
@@ -35,10 +36,10 @@ install_packages = [
         "name": "golang",
         "platform": "linux",
         "arch": "amd64",
-        "version": "1.10.3",
-        "filename": "go1.10.3.linux-amd64.tar.gz",
-        "install_dir": "go1.10.3",
-        "hash": "507f89d7c1f362709111f3a5d4f2d39c",
+        "version": "1.16.5",
+        "filename": "go1.16.5.linux-amd64.tar.gz",
+        "install_dir": "go1.16.5",
+        "hash": "76ff30daf15ef09e10a54be7b8a5f01b",
     },
     {
         # random cbddep
@@ -167,7 +168,6 @@ class TestInstaller:
                 install_dir = wd / "install" / install_dir
             assert os.path.isdir(install_dir)
             rmtree(install_dir, ignore_errors=True)
-
 
     def test_broken_install(self):
         clear_wd()
