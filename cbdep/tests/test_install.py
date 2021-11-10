@@ -40,6 +40,16 @@ install_packages = [
         "final_file": "dotnet"
     },
     {
+        # Something for Alpine
+        "name": "dotnet-core-runtime",
+        "platform": "linux",
+        "version": "6.0.0",
+        "arch": "x64-alpine",
+        "filename": "dotnet-runtime-6.0.0-linux-musl-x64.tar.gz",
+        "hash": "e37e167862f9bbc5735a8087d33d48c8",
+        "final_file": "dotnet"
+    },
+    {
         "name": "golang",
         "platform": "linux",
         "arch": "amd64",

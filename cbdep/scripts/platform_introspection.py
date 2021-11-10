@@ -40,7 +40,7 @@ def get_platforms():
     # Start with the most generic - the OS
     system = platform.system().lower()
 
-    # Initialize list
+    # Initialize list with the system.
     _platforms = [system]
 
     # OS-specific stuff
@@ -86,6 +86,20 @@ def get_platforms():
 
     return _platforms
 
+def _alpine_mod(arches):
+    """
+    If this is Alpine Linux, append "musl" and "alpine" to each arch
+    entry in arches. This appears to be a common convention (at least
+    nodejs, dotnet, and Bellsoft OpenJDK use it).
+    """
+
+    if "alpine" not in get_platforms():
+        return arches.copy()
+    return [f"{arch}-{suffix}"
+        for arch in arches
+        for suffix in ["musl", "alpine"]
+    ]
+
 def get_arches():
     """
     Returns a list of possible architectures based on the current system
@@ -93,20 +107,21 @@ def get_arches():
 
     global _arch, _intel_arches, _arm_arches
 
-    # Start from "machine" type (possibly overridden), then add some synonyms
+    # Start from "machine" type (possibly overridden)
     if _arch is not None:
         arch = _arch
     else:
         arch = platform.machine().casefold()
 
+
     # If we recognize this as being Intel or ARM, return a set of common
     # synonyms
     if arch in _intel_arches:
-        return _intel_arches.copy()
+        return _alpine_mod(_intel_arches)
     if arch in _arm_arches:
-        return _arm_arches.copy()
+        return _alpine_mod(_arm_arches)
     # Otherwise, just return what we've got
-    return [arch]
+    return _alpine_mod([arch])
 
 def get_default_arches(classic_cbdeps=False):
     """
@@ -128,5 +143,5 @@ def get_default_arches(classic_cbdeps=False):
         elif "darwin" in plat or "mac" in plat:
             return ["x86_64", "arm64"]
 
-    # Didn't find anything else, so return the list for Linux
-    return ["x86", "x86_64", "aarch64"]
+    # Didn't find anything else, so return the list for Linux, including Alpine
+    return ["x86", "x86_64", "aarch64", "x64-musl"]
