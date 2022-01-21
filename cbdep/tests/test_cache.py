@@ -1,11 +1,13 @@
 import pytest
 import requests
+import sys
 import tempfile
 from hashlib import md5
 from pathlib import Path
 from shutil import rmtree
 from urllib.parse import urljoin
-from cbdep.cbdep.scripts.cache import Cache
+sys.path.append('../scripts')
+from cache import Cache
 
 dep_url_path = "https://packages.couchbase.com/couchbase-server/deps/openssl/1.1.1l/1/"
 

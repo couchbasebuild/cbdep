@@ -522,7 +522,12 @@ class Installer:
         unpack_dir = temp_dir / 'unpack'
         unpack_dir.mkdir()
         logger.info(f"Unpacking archive to {target_dir}")
-        shutil.unpack_archive(self.installer_file, unpack_dir)
+
+        try:
+            shutil.unpack_archive(self.installer_file, unpack_dir)
+        except UnicodeEncodeError as e:
+            print("ERROR: Extraction failed - please check LANG/LC_ALL in your environment are pointing at character sets inclusive of UTF-8")
+            sys.exit(1)
 
         # Now we want to find the single final directory we care
         # about from the unpacked archive.

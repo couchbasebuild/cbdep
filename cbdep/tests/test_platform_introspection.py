@@ -1,5 +1,7 @@
 import pytest
-import cbdep.cbdep.scripts.platform_introspection as plat
+import sys
+sys.path.append('../scripts')
+import platform_introspection as plat
 
 class TestPlatformIntrospection:
 

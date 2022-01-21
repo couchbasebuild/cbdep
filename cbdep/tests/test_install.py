@@ -7,9 +7,9 @@ from hashlib import md5
 from pathlib import Path
 from shutil import rmtree
 sys.path.append('../scripts')
-from cbdep.cbdep.scripts.cache import Cache
-from cbdep.cbdep.scripts.install import Installer
-import cbdep.cbdep.scripts.platform_introspection as plat
+from cache import Cache
+from install import Installer
+import platform_introspection as plat
 
 wrong_platform_package = {
     "name": "java",
