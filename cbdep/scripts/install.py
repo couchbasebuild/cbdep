@@ -536,6 +536,11 @@ class Installer:
         elif args and "no_toplevel_dir" in args:
             # The unpacked directory *itself* is the final dir
             final_dir = unpack_dir
+        elif args and "create_toplevel_dir" in args:
+            # Archive contents need to be placed in a new directory, often "bin"
+            final_dir = temp_dir / 'newdir'
+            final_dir.mkdir()
+            unpack_dir.rename(final_dir / self.templatize(args["create_toplevel_dir"]))
         else:
             # The archive contained a directory with the expected
             # final name, as specified by target_dir_name
