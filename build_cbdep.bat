@@ -44,7 +44,8 @@ pyinstaller --add-data "%SCRIPTPATH%\cbdep.config;." ^
     --distpath dist --noconfirm ^
     --onefile ^
     --paths "%PYINSTPATHS%" ^
-    "%SCRIPTPATH%\cbdep\scripts\cbdep.py" || goto error
+    --name cbdep ^
+    "%SCRIPTPATH%\cbdep\scripts\main.py" || goto error
 
 goto eof
 
