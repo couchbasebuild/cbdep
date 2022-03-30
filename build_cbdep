@@ -36,4 +36,5 @@ pyinstaller --log-level DEBUG \
     --distpath dist --noconfirm \
     --onefile --clean \
     --paths "${VERSIONPATH}:${SCRIPTPATH}/cbdep/scripts" \
-    ${SCRIPTPATH}/cbdep/scripts/cbdep.py
+    --name cbdep \
+    ${SCRIPTPATH}/cbdep/scripts/main.py
