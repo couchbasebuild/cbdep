@@ -135,7 +135,7 @@ class Installer:
 
         return self.installer_file
 
-    def install(self, package, version, base_url, inst_dir):
+    def install(self, package, version, base_url, inst_dir, force_cbdeps=False):
         """
         Entry point to install a version of named package
         """
@@ -154,6 +154,26 @@ class Installer:
         self.installdir = str(pathlib.Path(inst_dir).absolute())
         self.symbols['INSTALL_DIR'] = self.installdir
 
+        # Determine descriptor block to use for package
+        pkgs = self.descriptor.get("packages")
+        if pkgs is None:
+            logger.error("Malformed configuration file (missing 'packages')")
+            sys.exit(1)
+        blocks = pkgs.get(package)
+
+        is_cbdeps = False
+        if blocks is None:
+            # Possibly a cbdeps package, try there
+            cbdeps = self.descriptor.get("cbdeps")
+            if cbdeps is not None:
+                if package in cbdeps['packages'] or force_cbdeps:
+                    blocks = cbdeps['descriptor']
+                    is_cbdeps = True
+
+        if blocks is None:
+            logger.error(f"Unknown package: {package}")
+            sys.exit(1)
+
         # Java is a special snowflake
         is_java = package.startswith("java") or package.startswith("openjdk")
 
@@ -162,27 +182,28 @@ class Installer:
         # Exception: For Java, include alpha characters in numeric slots;
         # eg., "8u292+10" will be split into "8u292" and "10".
         if is_java:
-            split_re = re.compile('[^0-9]+')
+            split_re = re.compile(r'[^0-9]+')
         else:
-            split_re = re.compile('[^A-Za-z0-9]+')
+            split_re = re.compile(r'[^A-Za-z0-9]+')
         version_bits = split_re.split(self.version, maxsplit=3)
 
         # Save a pkg_resources-compatible variant of the version number
         self.safe_version = '.'.join(version_bits)
         logger.debug(f"Safe version is {self.safe_version}")
 
-        # Special nonsense for Java - version numbers have 1 or 3
-        # components (eg. "11" followed by "11.0.1", or old ones like
-        # "8u292" which is a single component), but then also have a
-        # build number after a + (eg., "11+28" followed by "11.0.1+13",
-        # or old ones like "8u292+10"). We'd like to know that the
-        # number after + is always in the "build" slot, so center-pad
-        # the numbers.
-        if is_java and len(version_bits) == 2:
-            version_bits = [version_bits[0], '', '', version_bits[1]]
-        else:
-            # Make sure version_bits is exactly 4 elements long
-            version_bits = (version_bits + 4 * [''])[:4]
+        # Java version numbers have 1 or 3 components (eg. "11" followed
+        # by "11.0.1", or old ones like "8u292" which is a single
+        # component), but then also have a build number after a + (eg.,
+        # "11+28" followed by "11.0.1+13", or old ones like "8u292+10").
+        # Cbdeps version numbers always have a build number after a
+        # hyphen, eg. 71.1-1 or 54.1-cb10. For both, we want to make
+        # sure the final version component is in the "build" slot.
+        #
+        # For non-Java/Cbdeps versions, just pad version_bits out to
+        # exactly 4 slots.
+        num_bits = len(version_bits)
+        offset = num_bits - 1 if (is_java or is_cbdeps) else num_bits
+        version_bits[offset:0] = [''] * (4 - num_bits)
 
         self.symbols['VERSION_MAJOR'] = version_bits[0]
         self.symbols['VERSION_MINOR'] = version_bits[1]
@@ -194,23 +215,6 @@ class Installer:
         self.symbols['VERSION_MAJORMINORPATCH'] = '.'.join(
             [x for x in version_bits[:3] if x]
         )
-
-        pkgs = self.descriptor.get("packages")
-        if pkgs is None:
-            logger.error("Malformed configuration file (missing 'packages')")
-            sys.exit(1)
-
-        blocks = pkgs.get(package)
-        if blocks is None:
-            classics = self.descriptor.get("classic-cbdeps")
-            if classics is not None:
-                # Possibly a "classic" cbdeps package
-                if package in classics['packages']:
-                    blocks = classics['descriptor']
-
-        if blocks is None:
-            logger.error(f"Unknown package: {package}")
-            sys.exit(1)
 
         logger.debug(f"Starting install for package {package}")
 
@@ -291,17 +295,17 @@ class Installer:
         """
         If the block contains an if_arch key, return true if the current
         architecture is one of the values for that key, else false.
-        If the block contains a default_arches or default_classic_arches key,
+        If the block contains a default_arches or default_cbdeps_arches key,
         behave as though if_arch existed with a platform-dependent default
         set of arches.
-        If the block does not contain either key, return true
+        If the block does not contain either key, return true.
         """
 
         arches = None
         if "default_arches" in block:
             arches = get_default_arches()
-        elif "default_classic_arches" in block:
-            arches = get_default_arches(classic_cbdeps=True)
+        elif "default_cbdeps_arches" in block:
+            arches = get_default_arches(cbdeps_arches=True)
         if arches is not None:
             block["if_arch"] = arches
             logger.debug(f"Set if_arch: {block['if_arch']}")

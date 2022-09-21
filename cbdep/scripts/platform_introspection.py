@@ -113,7 +113,6 @@ def get_arches():
     else:
         arch = platform.machine().casefold()
 
-
     # If we recognize this as being Intel or ARM, return a set of common
     # synonyms
     if arch in _intel_arches:
@@ -123,7 +122,7 @@ def get_arches():
     # Otherwise, just return what we've got
     return _alpine_mod([arch])
 
-def get_default_arches(classic_cbdeps=False):
+def get_default_arches(cbdeps_arches=False):
     """
     Returns a platform-dependent value suitable for if_arch directives.
     Important: this is a list of arch names most frequently used in *package*
@@ -136,7 +135,7 @@ def get_default_arches(classic_cbdeps=False):
 
     for plat in get_platforms():
         if plat.startswith("win"):
-            if classic_cbdeps:
+            if cbdeps_arches:
                 return ["x86", "amd64"]
             else:
                 return ["x86", "x86_64"]

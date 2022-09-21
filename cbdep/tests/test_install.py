@@ -77,14 +77,14 @@ install_packages = [
         "final_file": "bin/java"
     },
     {
-        # classic cbdep
-        "name": "boost",
+        # classic cbdep - also tests padding of version_bits
+        "name": "icu4c",
         "base_url": "https://packages.couchbase.com/couchbase-server/deps",
-        "platform": "centos7",
-        "version": "1.74.0-cb1",
-        "filename": "boost-centos7-x86_64-1.74.0-cb1.tgz",
-        "hash": "74e40ef0dddb0be854b91054c4120706",
-        "final_file": "include/boost/version.hpp"
+        "platform": "amzn2",
+        "version": "59.1-cb2",
+        "filename": "icu4c-amzn2-x86_64-59.1-cb2.tgz",
+        "hash": "6f352f436754b7b9b785970673178353",
+        "final_file": "include/unicode/ustring.h"
     },
     {
         # something with install_dir

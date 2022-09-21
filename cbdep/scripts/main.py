@@ -118,7 +118,8 @@ class Cbdep:
             args.package,
             args.version,
             args.base_url,
-            installdir
+            installdir,
+            args.cbdeps
         )
 
         if args.output is not None:
@@ -222,6 +223,10 @@ def main():
     install_parser.add_argument(
         "-b", "--base-url", type=str,
         help="Alternate base URL for downloading dep (only applicable to a few packages)"
+    )
+    install_parser.add_argument(
+        "-C", "--cbdeps", action="store_true",
+        help="Force interpreting 'package' as a cbdeps package"
     )
     install_parser.add_argument(
         "-n", "--cache-only", action='store_true',
