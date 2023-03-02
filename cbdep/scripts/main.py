@@ -134,7 +134,7 @@ class Cbdep:
         with open(self.configpath(args)) as y:
             config = yaml.safe_load(y)
         pkgs = list(config['packages'].keys()) \
-            + config['classic-cbdeps']['packages']
+            + config['cbdeps']['packages']
         print(
             "Available packages (not all may be available on all platforms):"
         )

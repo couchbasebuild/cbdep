@@ -77,13 +77,22 @@ install_packages = [
         "final_file": "bin/java"
     },
     {
+        # MB-54306: openjdk with optional version segment
+        "name": "openjdk",
+        "platform": "linux",
+        "version": "11.0.16.1+1",
+        "filename": "OpenJDK11U-jdk_x64_linux_hotspot_11.0.16.1_1.tar.gz",
+        "hash": "251cbce7b80e8fdcb48285867bba77d6",
+        "final_file": "bin/java"
+    },
+    {
         # classic cbdep - also tests padding of version_bits
         "name": "icu4c",
         "base_url": "https://packages.couchbase.com/couchbase-server/deps",
         "platform": "amzn2",
         "version": "59.1-cb2",
         "filename": "icu4c-amzn2-x86_64-59.1-cb2.tgz",
-        "hash": "6f352f436754b7b9b785970673178353",
+        "hash": "6e95a3aa1dcd0f38c10596244e500c9d",
         "final_file": "include/unicode/ustring.h"
     },
     {

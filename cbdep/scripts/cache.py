@@ -60,7 +60,7 @@ class Cache:
             filename = None
             cd = r.headers.get('content-disposition')
             if cd:
-                filenames = re.findall('filename=(.+)', cd)
+                filenames = re.findall('filename=([^;]+)', cd)
                 if len(filenames) > 0:
                     filename = filenames[0]
             if filename is None:

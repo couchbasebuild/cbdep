@@ -21,6 +21,7 @@ from platform_introspection import get_default_arches
 logger = logging.getLogger("cbdep")
 zipfile_with_permissions.register()
 
+
 class Installer:
     """
     Manages caching installation files and unpacking them based on an
@@ -124,7 +125,8 @@ class Installer:
         self.from_local_file = pathlib.Path(from_local_file)
         self.set_recache(False)
         if not self.from_local_file.exists():
-            logger.error(f"Specified local file {from_local_file} does not exist!")
+            logger.error(
+                f"Specified local file {from_local_file} does not exist!")
             sys.exit(1)
 
     def get_installer_file(self):
@@ -185,7 +187,17 @@ class Installer:
             split_re = re.compile(r'[^0-9]+')
         else:
             split_re = re.compile(r'[^A-Za-z0-9]+')
-        version_bits = split_re.split(self.version, maxsplit=3)
+        version_bits = split_re.split(self.version)
+
+        # Java's version string can have an arbitrary number of components.
+        # When more than 4 version components are found, we need to do some
+        # manipulation to ensure BUILD does not contain the additional info
+        # instead, we dot-join anything between MINOR and BUILD and treat
+        # the combined string as the PATCH component
+        if len(version_bits) > 4:
+            version_bits[2] = ".".join(version_bits[2:-1])
+            version_bits[3] = version_bits[-1]
+            version_bits = version_bits[:4]
 
         # Save a pkg_resources-compatible variant of the version number
         self.safe_version = '.'.join(version_bits)
@@ -215,7 +227,6 @@ class Installer:
         self.symbols['VERSION_MAJORMINORPATCH'] = '.'.join(
             [x for x in version_bits[:3] if x]
         )
-
         logger.debug(f"Starting install for package {package}")
 
         block = self.find_block(blocks)
@@ -328,6 +339,7 @@ class Installer:
 
         # Read the if_version directive, and ensure it is a list
         if_version = block["if_version"]
+
         if not isinstance(if_version, list):
             if_version = [if_version]
 
@@ -484,7 +496,8 @@ class Installer:
                 localfile = self.scrape_html(localfile, action["scrape_html"])
             except:
                 # Try again just in case we've cached a bad HTML file
-                logger.debug("Error parsing HTML, trying to get a fresh copy..")
+                logger.debug(
+                    "Error parsing HTML, trying to get a fresh copy..")
                 localfile = str(self.cache.get(url, True))
                 localfile = self.scrape_html(localfile, action["scrape_html"])
 
@@ -508,7 +521,7 @@ class Installer:
         """
 
         install_dir = pathlib.Path(self.installdir)
-        install_dir.mkdir(exist_ok = True, parents = True)
+        install_dir.mkdir(exist_ok=True, parents=True)
 
         args = action["unarchive"]
 
@@ -521,7 +534,7 @@ class Installer:
         target_dir = install_dir / target_dir_name
 
         # We extract the archive to a temporary directory
-        temp_dir_handle = tempfile.TemporaryDirectory(dir = install_dir)
+        temp_dir_handle = tempfile.TemporaryDirectory(dir=install_dir)
         temp_dir = pathlib.Path(temp_dir_handle.name)
         unpack_dir = temp_dir / 'unpack'
         unpack_dir.mkdir()
@@ -544,7 +557,8 @@ class Installer:
             # Archive contents need to be placed in a new directory, often "bin"
             final_dir = temp_dir / 'newdir'
             final_dir.mkdir()
-            unpack_dir.rename(final_dir / self.templatize(args["create_toplevel_dir"]))
+            unpack_dir.rename(
+                final_dir / self.templatize(args["create_toplevel_dir"]))
         else:
             # The archive contained a directory with the expected
             # final name, as specified by target_dir_name
@@ -564,10 +578,12 @@ class Installer:
 
         package = action["cbdep"]
         version = action["version"]
-        install_dir = self.templatize(action.get("install_dir", self.installdir))
+        install_dir = self.templatize(
+            action.get("install_dir", self.installdir))
 
         installer = self.copy()
-        logger.info(f"Calling nested cbdep install -d {install_dir} {package} {version}")
+        logger.info(
+            f"Calling nested cbdep install -d {install_dir} {package} {version}")
         installer.install(package, str(version), self.base_url, install_dir)
 
     def do_run(self, action):
