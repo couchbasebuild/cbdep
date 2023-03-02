@@ -2,5 +2,4 @@ git+https://github.com/couchbase/python-couchbase-commons@v0.5.1#egg=cbbuild-uti
 PyYAML
 requests
 distro
-pyinstaller==4.6 ; sys_platform != 'darwin' or platform_machine != 'x86_64'
-pyinstaller==4.2 ; sys_platform == 'darwin' and platform_machine == 'x86_64'
+pyinstaller==4.10
