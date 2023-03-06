@@ -8,7 +8,7 @@ _platforms = None
 _arch = None
 
 _intel_arches = ["x86_64", "amd64", "x64"]
-_arm_arches = ["aarch64", "arm64"]
+_arm_arches = ["aarch64", "arm64", "aarch_64"]
 
 def override_platforms(platforms):
     """
