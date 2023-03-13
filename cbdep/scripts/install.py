@@ -455,7 +455,7 @@ class Installer:
                     logger.debug(f"...found {url}")
                     return str(self.cache.get(url, self.recache))
 
-        logger.error("Scraped HTML did not find {regexp}")
+        logger.error(f"Scraped HTML did not find {regexp}")
         sys.exit(1)
 
     def do_url(self, action):
@@ -498,7 +498,7 @@ class Installer:
                 # Try again just in case we've cached a bad HTML file
                 logger.debug(
                     "Error parsing HTML, trying to get a fresh copy..")
-                localfile = str(self.cache.get(url, True))
+                localfile = str(self.cache.get(real_url, True))
                 localfile = self.scrape_html(localfile, action["scrape_html"])
 
         # Remember the downloaded file
