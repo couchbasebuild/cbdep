@@ -124,7 +124,7 @@ function check_all_packages() {
     check_one_package java 11.0.3
     check_one_package java 14
     check_one_package java 8u192
-    check_one_package openjdk-ea 21-ea+11
+    check_one_package openjdk-ea 21-ea+18
     check_one_package openjdk 9.0.4+11
     check_one_package openjdk 8u282-b08
     check_one_package openjdk 11.0.9.1+1

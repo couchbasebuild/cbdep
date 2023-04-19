@@ -13,4 +13,4 @@ class TestPlatformIntrospection:
 
     def test__override_arch(self):
         plat.override_arch("arm64")
-        assert plat.get_arches() == ["aarch64", "arm64"]
+        assert plat.get_arches() == ["aarch64", "arm64", "aarch_64"]
