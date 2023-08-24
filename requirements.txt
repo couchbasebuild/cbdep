@@ -2,4 +2,6 @@ git+https://github.com/couchbase/python-couchbase-commons@v0.5.1#egg=cbbuild-uti
 PyYAML
 requests
 distro
-pyinstaller==4.10
+pyinstaller==4.10.0; platform_system == "Windows"
+pyinstaller==5.13.0; platform_system != "Windows"
+urllib3<2.0.0
