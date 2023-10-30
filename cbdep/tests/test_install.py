@@ -86,6 +86,15 @@ install_packages = [
         "final_file": "bin/java"
     },
     {
+        # CBD-5669: openjdk with rebuild number
+        "name": "openjdk",
+        "platform": "windows",
+        "version": "17.0.9+9.1",
+        "filename": "OpenJDK17U-jdk_x64_windows_hotspot_17.0.9_9.zip",
+        "hash": "4e45d6412a88b2dbef88d5391d533a46",
+        "final_file": "bin/java.exe"
+    },
+    {
         # classic cbdep - also tests padding of version_bits
         "name": "icu4c",
         "base_url": "https://packages.couchbase.com/couchbase-server/deps",
@@ -94,6 +103,16 @@ install_packages = [
         "filename": "icu4c-amzn2-x86_64-59.1-cb2.tgz",
         "hash": "6e95a3aa1dcd0f38c10596244e500c9d",
         "final_file": "include/unicode/ustring.h"
+    },
+    {
+        # classic cbdep with "profile" extension in version number
+        "name": "curl",
+        "base_url": "https://packages.couchbase.com/couchbase-server/deps",
+        "platform": "linux",
+        "version": "8.4.0-1_openssl31x",
+        "filename": "curl-linux-x86_64-8.4.0-1_openssl31x.tgz",
+        "hash": "7bc91f2d00d89e7fda734556d0121946",
+        "final_file": "lib/libcurl.so.4.8.0"
     },
     {
         # something with install_dir

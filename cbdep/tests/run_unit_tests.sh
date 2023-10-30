@@ -6,6 +6,7 @@ unset LANG
 
 [ ! -d env ] && python3 -m venv env
 source env/bin/activate
+python -m ensurepip
 pip3 install \
     pytest \
     pytest-cov \

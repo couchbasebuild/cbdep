@@ -176,45 +176,84 @@ class Installer:
             logger.error(f"Unknown package: {package}")
             sys.exit(1)
 
-        # Java is a special snowflake
-        is_java = package.startswith("java") or package.startswith("openjdk")
+        # Version number handling. We want the following variables available for
+        # templates:
+        #
+        #  VERSION - exactly what was typed at the command line
+        #
+        #  VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD - up to
+        #    four numeric components of VERSION
+        #
+        #  VERSION_MAJORMINORPATCH - the first three numeric components of
+        #    VERSION joined with '.' characters
+        #
+        # We achieve this by splitting VERSION on any non-numeric characters,
+        # and then populating an array "version_bits" with up to the first four
+        # numbers. In general we do so strictly in order, padding with empty
+        # strings; ie, the version is just "1.2", then "version_bits" will be
+        # ['1', '2', '', ''].
+        #
+        # If there are more than four numeric components, for historic reasons
+        # we consolidate the excess components into VERSION_PATCH, so that
+        # VERSION_BUILD is always a single number.
+        #
+        # There are two exceptions to those overall rules: OpenJDK and classic
+        # cbdeps, which will be handled in-line.
+        is_openjdk = package.startswith("openjdk")
+        if is_openjdk:
+            # OpenJDK has two main exceptions:
 
-        # Provide version components separately - split on any non-numeric
-        # characters; save up to four components (major, minor, patch, build).
-        # Exception: For Java, include alpha characters in numeric slots;
-        # eg., "8u292+10" will be split into "8u292" and "10".
-        if is_java:
-            split_re = re.compile(r'[^0-9]+')
+            # 1. The build number is always separated with a '+' character.
+            #    Occasionally they also have a rebuild number, which is
+            #    represented as an extra .X after the build number. This rebuild
+            #    number is only for occasional repackaging and is not part of
+            #    the "real" version, so we do not put it into version_bits. It
+            #    is only available via VERSION, which remains exactly what was
+            #    typed at the command line - fortunately that is the only place
+            #    we need it.
+            base_ver, build = self.version.split('+')
+            build_bits = build.split('.')
+
+            # 2. Older Java versions had alphanumeric version number components,
+            #    eg. "8u292+10", and due to the way the URLs are formed, it's
+            #    most convenient to treat "8u292" as VERSION_MAJOR. So we split
+            #    on non-numeric characters rather than non-alphanumeric
+            #    characters.
+            version_bits = re.split(r'[^0-9]+', f"{base_ver}+{build_bits[0]}")
+
+        elif is_cbdeps:
+            # A few cbdeps packages have version numbers with a "profile"
+            # extension, which is separated by a _ character. So for those, we
+            # don't want to split on that.
+            version_bits = re.split(r'[^A-Za-z0-9_]+', self.version)
+
         else:
-            split_re = re.compile(r'[^A-Za-z0-9]+')
-        version_bits = split_re.split(self.version)
+            # Otherwise, split on any non-alphanumeric characters.
+            version_bits = re.split(r'[^A-Za-z0-9]+', self.version)
 
-        # Java's version string can have an arbitrary number of components.
         # When more than 4 version components are found, we need to do some
-        # manipulation to ensure BUILD does not contain the additional info
-        # instead, we dot-join anything between MINOR and BUILD and treat
+        # manipulation to ensure BUILD does not contain the additional info.
+        # Instead, we dot-join anything between MINOR and BUILD and treat
         # the combined string as the PATCH component
         if len(version_bits) > 4:
             version_bits[2] = ".".join(version_bits[2:-1])
             version_bits[3] = version_bits[-1]
             version_bits = version_bits[:4]
 
-        # Save a pkg_resources-compatible variant of the version number
+        # Save a pkg_resources-compatible variant of the version number. Note
+        # this will not contain the OpenJDK "rebuild" number if one exists.
         self.safe_version = '.'.join(version_bits)
         logger.debug(f"Safe version is {self.safe_version}")
 
-        # Java version numbers have 1 or 3 components (eg. "11" followed
-        # by "11.0.1", or old ones like "8u292" which is a single
-        # component), but then also have a build number after a + (eg.,
-        # "11+28" followed by "11.0.1+13", or old ones like "8u292+10").
-        # Cbdeps version numbers always have a build number after a
-        # hyphen, eg. 71.1-1 or 54.1-cb10. For both, we want to make
-        # sure the final version component is in the "build" slot.
+        # OpenJDK versions were explained earlier. Cbdeps version numbers always
+        # have a build number after a hyphen, eg. 71.1-1 or 54.1-cb10. For both
+        # OpenJDK and Cbdeps, we want to make sure the final version component
+        # is in the "build" slot.
         #
-        # For non-Java/Cbdeps versions, just pad version_bits out to
-        # exactly 4 slots.
+        # For non-OpenJDK/Cbdeps versions, just pad version_bits out to exactly
+        # 4 slots.
         num_bits = len(version_bits)
-        offset = num_bits - 1 if (is_java or is_cbdeps) else num_bits
+        offset = num_bits - 1 if (is_openjdk or is_cbdeps) else num_bits
         version_bits[offset:0] = [''] * (4 - num_bits)
 
         self.symbols['VERSION_MAJOR'] = version_bits[0]
