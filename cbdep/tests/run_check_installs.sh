@@ -113,8 +113,13 @@ function check_one_package() {
     local VERSION=$2
     local PLATFORM=${3:-$PLATFORM}
     partial_log "Installing ${PACKAGE} ${VERSION} (${PLATFORM})... "
-    ${SCRIPT_DIR}/../../dist/cbdep -p ${PLATFORM} install -d ./installs/ ${PACKAGE} ${VERSION} &>/dev/null || log "${PACKAGE} ${VERSION} install failed"
-    log "success!"
+    if ! ./cbdep -p ${PLATFORM} install -d ./installs/ ${PACKAGE} ${VERSION} &>/dev/null; then
+        echo
+        echo "FATAL: ${PACKAGE} ${VERSION} install failed"
+        exit 1
+    else
+        log "success!"
+    fi
 }
 
 function check_all_packages() {
@@ -124,16 +129,18 @@ function check_all_packages() {
     check_one_package java 11.0.3
     check_one_package java 14
     check_one_package java 8u192
-    check_one_package openjdk-ea 21-ea+18
+    check_one_package openjdk-ea 22-ea+25
     check_one_package openjdk 9.0.4+11
     check_one_package openjdk 8u282-b08
     check_one_package openjdk 11.0.9.1+1
     check_one_package openjdk 11.0.9+11
+    # openjdk with a dotted build number (CBD-5669)
+    check_one_package openjdk 17.0.9+9.1 windows
     check_one_package openjdk-jre 9.0.4+11
     check_one_package openjdk-jre 8u282-b08
     check_one_package openjdk-jre 11.0.9.1+1
     check_one_package openjdk-jre 11.0.9+11
-    check_one_package corretto 11.0.3.7.1
+    check_one_package corretto 11.0.21.9.1
     check_one_package python 3.9.1
     check_one_package miniforge3 22.9.0-1
     check_one_package mambaforge 4.13.0-1
@@ -162,12 +169,11 @@ function check_all_packages() {
 
 introspect
 pushd ${WD}
-check_all_v1_cbdeps amzn2 "$AMZN2_V1_DEPS"
+
+check_all_packages ${PLATFORM}
+
 check_all_v1_cbdeps linux "$LINUX_V1_DEPS"
-check_all_v2_cbdeps amzn2 "$AMZN2_V2_DEPS"
 check_all_v2_cbdeps linux "$LINUX_V2_DEPS"
 
 # Ensure we check a cbdep with 4 version parts
 check_v2_dep erlang 24.3.4.4 4 linux
-
-check_all_packages ${PLATFORM}

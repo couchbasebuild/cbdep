@@ -203,22 +203,21 @@ class Installer:
         if is_openjdk:
             # OpenJDK has two main exceptions:
 
-            # 1. The build number is always separated with a '+' character.
-            #    Occasionally they also have a rebuild number, which is
-            #    represented as an extra .X after the build number. This rebuild
-            #    number is only for occasional repackaging and is not part of
-            #    the "real" version, so we do not put it into version_bits. It
-            #    is only available via VERSION, which remains exactly what was
-            #    typed at the command line - fortunately that is the only place
-            #    we need it.
-            base_ver, build = self.version.split('+')
+            # 1. The build number is always separated with a '+'
+            #    character or, in JDK 8, by "-b". Occasionally they also
+            #    have a rebuild number, which is represented as an extra
+            #    .X after the build number. This rebuild number is only
+            #    for occasional repackaging and is not part of the
+            #    "real" version, so we do not put it into version_bits.
+            #    It is only available via VERSION, which remains exactly
+            #    what was typed at the command line - fortunately that
+            #    is the only place we need it.
+            base_ver, build = re.split(r'\+|-b', self.version)
             build_bits = build.split('.')
 
-            # 2. Older Java versions had alphanumeric version number components,
-            #    eg. "8u292+10", and due to the way the URLs are formed, it's
-            #    most convenient to treat "8u292" as VERSION_MAJOR. So we split
-            #    on non-numeric characters rather than non-alphanumeric
-            #    characters.
+            # 2. JDK 8 used "u" to separate MAJOR_VERSION and
+            #    MINOR_VERSION, so split on non-numerics rather than
+            #    non-alphanumerics.
             version_bits = re.split(r'[^0-9]+', f"{base_ver}+{build_bits[0]}")
 
         elif is_cbdeps:
@@ -226,6 +225,17 @@ class Installer:
             # extension, which is separated by a _ character. So for those, we
             # don't want to split on that.
             version_bits = re.split(r'[^A-Za-z0-9_]+', self.version)
+
+        elif package == "java":
+            # "java" is a slight exception. Its versioning scheme is
+            # truly bizarre; however, cbdep.config actually only cares
+            # about VERSION, VERSION_MAJOR, and (only for JDK 8)
+            # VERSION_MINOR which needs to be the part after "u" in the
+            # JDK 8 versioning system. As above for openjdk, we split on
+            # only non-numerics rather than non-alphanumerics. We don't
+            # need to do anything different later, so we don't have an
+            # is_java boolean here.
+            version_bits = re.split(r'[^0-9]+', self.version)
 
         else:
             # Otherwise, split on any non-alphanumeric characters.

@@ -60,13 +60,21 @@ install_packages = [
         "final_file": "bin/go"
     },
     {
-        # random cbddep
+        # random cbdep
         "name": "analytics-jars",
         "base_url": "https://packages.couchbase.com/releases",
         "platform": "linux",
         "version": "7.0.2-6512",
         "hash": "0bbb2376f42848451b6898247aa85793",
         "final_file": "jars/ini4j-0.5.4.jar"
+    },
+    {
+        "name": "java",
+        "platform": "linux",
+        "version": "11.0.3",
+        "filename": "jdk-11.0.3_linux-x64_bin.tar.gz",
+        "hash": "d23a164e6c13db365a5d8a15ba00f752",
+        "final_file": "bin/java"
     },
     {
         "name": "openjdk",
