@@ -130,17 +130,19 @@ def get_default_arches(cbdeps_arches=False):
     "arm64" and "aarch64", or "x86_64" and "amd64", because given the way
     if_arch works, only the first will ever get matched. Basically these
     should contain just the most common name (if any) for "32-bit Intel",
-    "64-bit Intel", and "64-bit ARM" on each OS.
+    "64-bit Intel", "64-bit ARM", and any other supported arches on each OS.
     """
 
     for plat in get_platforms():
         if plat.startswith("win"):
             if cbdeps_arches:
-                return ["x86", "amd64"]
+                return ["x86", "amd64", "arm64"]
             else:
-                return ["x86", "x86_64"]
+                return ["x86", "x86_64", "arm64"]
         elif "darwin" in plat or "mac" in plat:
             return ["x86_64", "arm64"]
+        elif "android" in plat:
+            return ["armv7a", "aarch64", "i686", "x86_64"]
 
     # Didn't find anything else, so return the list for Linux, including Alpine
     return ["x86", "x86_64", "aarch64", "x64-musl"]
