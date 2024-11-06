@@ -47,6 +47,7 @@ def get_platforms():
     if system == "linux":
         import distro
 
+        # Add distro-specific variants
         dist_id = distro.id()
         _platforms.insert(0, dist_id)
 
@@ -72,7 +73,14 @@ def get_platforms():
             _platforms.insert(0, f"{dist_id}{dist_ver}")
             _platforms.insert(0, f"{dist_id}-{dist_ver}")
 
+        # Add the "target triple" version
+        if dist_id == "alpine":
+            _platforms.insert(0, "unknown-linux-musl")
+        else:
+            _platforms.insert(0, "unknown-linux-gnu")
+
     elif system == "darwin":
+        _platforms.insert(0, "apple-darwin")
         _platforms.insert(0, "macosx")
         _platforms.insert(0, "macos")
         _platforms.insert(0, "mac")
@@ -82,6 +90,7 @@ def get_platforms():
         # QQQ Somehow introspect MSVC version?
         _platforms.insert(0, "windows_msvc2015")
         _platforms.insert(0, "windows_msvc2017")
+        _platforms.insert(0, "pc-windows-msvc")
         _platforms.insert(0, "win")
 
     return _platforms
@@ -95,9 +104,9 @@ def _alpine_mod(arches):
 
     if "alpine" not in get_platforms():
         return arches.copy()
-    return [f"{arch}-{suffix}"
+    return [f"{arch}{suffix}"
         for arch in arches
-        for suffix in ["musl", "alpine"]
+        for suffix in ["-musl", "-alpine", ""]
     ]
 
 def get_arches():

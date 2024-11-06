@@ -126,10 +126,7 @@ function check_all_packages() {
     local PLATFORM=$1
     log "Testing packages"
     # This should maybe be derived from extra fields in cbdep.config
-    check_one_package java 11.0.3
-    check_one_package java 14
-    check_one_package java 8u192
-    check_one_package openjdk-ea 22-ea+25
+    check_one_package uv 0.4.29 unknown-linux-gnu
     check_one_package openjdk 9.0.4+11
     check_one_package openjdk 8u282-b08
     check_one_package openjdk 11.0.9.1+1

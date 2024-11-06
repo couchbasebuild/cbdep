@@ -69,14 +69,6 @@ install_packages = [
         "final_file": "jars/ini4j-0.5.4.jar"
     },
     {
-        "name": "java",
-        "platform": "linux",
-        "version": "11.0.3",
-        "filename": "jdk-11.0.3_linux-x64_bin.tar.gz",
-        "hash": "d23a164e6c13db365a5d8a15ba00f752",
-        "final_file": "bin/java"
-    },
-    {
         "name": "openjdk",
         "platform": "linux",
         "version": "11.0.12+7",
@@ -134,13 +126,22 @@ install_packages = [
         "final_file": "bin/php"
     },
     {
-        # something with run and no_toplevel_dir
+        # something with run
         "name": "docker",
         "platform": "linux",
         "version": "20.10.3",
         "filename": "docker-20.10.3.tgz",
         "hash": "4bb3ff2457b540995ddae3124f06d40a",
         "final_file": "bin/docker"
+    },
+    {
+        # something with both toplevel_dir and create_toplevel_dir
+        "name": "uv",
+        "platform": "unknown-linux-gnu",
+        "version": "0.4.29",
+        "filename": "uv-x86_64-unknown-linux-gnu.tar.gz",
+        "hash": "3c08a4629ca3368f80e26a091a6f1496",
+        "final_file": "bin/uvx"
     }
 ]
 config = "../../cbdep.config"

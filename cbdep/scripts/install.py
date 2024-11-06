@@ -328,7 +328,7 @@ class Installer:
             # Default value for PLATFORM_EXT - kind of a hack to put this here
             # QQQ Allow overriding in config
             if symbol == "PLATFORM":
-                if matched_value.startswith("win"):
+                if matched_value.startswith(("win", "pc-win")):
                     self.symbols['PLATFORM_EXT'] = "zip"
                 else:
                     self.symbols['PLATFORM_EXT'] = "tar.gz"
@@ -595,30 +595,33 @@ class Installer:
             print("ERROR: Extraction failed - please check LANG/LC_ALL in your environment are pointing at character sets inclusive of UTF-8")
             sys.exit(1)
 
-        # Now we want to find the single final directory we care
-        # about from the unpacked archive.
+        # Now we want to find the single directory containing the
+        # contents we care about from the unpacked archive.
         if args and "toplevel_dir" in args:
-            final_dir = unpack_dir / self.templatize(args["toplevel_dir"])
-        elif args and "no_toplevel_dir" in args:
-            # The unpacked directory *itself* is the final dir
-            final_dir = unpack_dir
-        elif args and "create_toplevel_dir" in args:
-            # Archive contents need to be placed in a new directory, often "bin"
-            final_dir = temp_dir / 'newdir'
-            final_dir.mkdir()
-            unpack_dir.rename(
-                final_dir / self.templatize(args["create_toplevel_dir"]))
+            toplevel_dir = self.templatize(args["toplevel_dir"])
+            contents_dir = unpack_dir / toplevel_dir
+            if not contents_dir.is_dir():
+                logger.error(f"Archive does not contain directory {toplevel_dir}!")
+                sys.exit(2)
         else:
-            # The archive contained a directory with the expected
-            # final name, as specified by target_dir_name
-            final_dir = unpack_dir / target_dir_name
+            # The unpacked directory *itself* is the contents dir
+            contents_dir = unpack_dir
+
+        # Sometimes the contents dir needs to be wrapped in a new
+        # directory, often "bin"
+        if args and "create_toplevel_dir" in args:
+            wrap_dir = temp_dir / 'wrap_dir'
+            wrap_dir.mkdir()
+            contents_dir.rename(
+                wrap_dir / self.templatize(args["create_toplevel_dir"]))
+            contents_dir = wrap_dir
 
         # Finally as atomically as possible, move the existing
         # target directory out of the way (if it exists) and move
-        # the final directory to the target directory.
+        # the contents directory to the target directory.
         if target_dir.exists():
             target_dir.rename(temp_dir / "recycle")
-        final_dir.rename(target_dir)
+        contents_dir.rename(target_dir)
 
     def do_cbdep(self, action):
         """
