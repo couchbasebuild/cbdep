@@ -1,5 +1,0 @@
-PyYAML
-requests
-distro
-pyinstaller==6.11.0; platform_system == "Windows"
-pyinstaller==6.11.0; platform_system != "Windows"

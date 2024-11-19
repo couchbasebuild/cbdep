@@ -12,11 +12,11 @@ import sys
 import tempfile
 import yaml
 
-from pkg_resources import Requirement
+from packaging.specifiers import SpecifierSet
 from subprocess import run
 
-import zipfile_with_permissions
-from platform_introspection import get_default_arches
+import cbdep.zipfile_with_permissions as zipfile_with_permissions
+from cbdep.platform_introspection import get_default_arches
 
 logger = logging.getLogger("cbdep")
 zipfile_with_permissions.register()
@@ -79,13 +79,12 @@ class Installer:
         shutil.rmtree(self.temp_dir)
 
     @classmethod
-    def fromYaml(cls, yamlfile, cache, platforms, arches):
+    def fromYaml(cls, yamltext, cache, platforms, arches):
         """
         Constructor from a YAML configuration file
         """
 
-        with open(yamlfile) as y:
-            config = yaml.safe_load(y)
+        config = yaml.safe_load(yamltext)
         return cls(config, cache, platforms, arches)
 
     def copy(self):
@@ -386,25 +385,12 @@ class Installer:
         if "if_version" not in block:
             return True
 
-        # Read the if_version directive, and ensure it is a list
-        if_version = block["if_version"]
+        # Read the if_version directive
+        if_version = block.get("if_version", None)
+        if not if_version:
+            return True
 
-        if not isinstance(if_version, list):
-            if_version = [if_version]
-
-        for requirement in if_version:
-            # Create a Requirement for this directive. The package name in the
-            # Requirement spec is not actually used, but may as well use the
-            # package name we have
-            req = Requirement.parse(self.package + requirement)
-
-            # And check the version we're installing against the Requirement
-            if req.__contains__(self.safe_version):
-                return True
-
-        # If we had an if_version directive and none of them matches the
-        # version being installed, this block doesn't apply
-        return False
+        return SpecifierSet(if_version).__contains__(self.safe_version)
 
     def execute_block(self, block):
         """

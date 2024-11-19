@@ -7,7 +7,7 @@ from pathlib import Path
 from shutil import rmtree
 from urllib.parse import urljoin
 sys.path.append('../scripts')
-from cache import Cache
+from cbdep.cache import Cache
 
 dep_url_path = "https://packages.couchbase.com/couchbase-server/deps/openssl/1.1.1l/1/"
 
@@ -28,7 +28,8 @@ name_sha = {
     "ubuntu": md5(url["ubuntu"].encode('utf-8')).hexdigest()
 }
 
-cachedir = Path(tempfile.mkdtemp())
+cachetempdir = tempfile.TemporaryDirectory()
+cachedir = Path(cachetempdir.name)
 
 class TestCache:
     cache = Cache(cachedir)

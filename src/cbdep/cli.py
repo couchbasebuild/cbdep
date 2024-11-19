@@ -3,6 +3,8 @@ Dependency Management System
 """
 
 import argparse
+import cbdep
+import importlib
 import logging
 import os
 import os.path
@@ -11,11 +13,9 @@ import shutil
 import sys
 import yaml
 
-from cache import Cache
-from install import Installer
-from platform_introspection import get_arches, get_platforms, override_platforms, override_arch
-
-from _version import __version__, __build__
+from cbdep.cache import Cache
+from cbdep.install import Installer
+from cbdep.platform_introspection import get_arches, get_platforms, override_platforms, override_arch
 
 
 # Set up logging and handler
@@ -63,34 +63,18 @@ class Cbdep:
         print(get_arches())
 
     @staticmethod
-    def configpath(args):
+    def loadconfig(args):
         """
-        Returns the name of the config file defining the available packages
+        Returns the contents of the config file defining the available packages
         """
 
         yamlfile = args.config_file
-        if yamlfile is None:
-            if getattr(sys, 'frozen', False):
-                # running in a bundle
-                mydir = pathlib.Path(sys._MEIPASS)
-            else:
-                # running live
-                mydir = pathlib.Path.home()
-            configfile = mydir / "cbdep.config"
-            # For convenience mostly when debugging, if the normal
-            # cbdep.config can't be found, check the cwd. If that can't
-            # be found either, though, return the normal path so the
-            # error message makes sense
-            if not configfile.exists():
-                pwd_configfile = pathlib.Path.cwd() / "cbdep.config"
-                if pwd_configfile.exists():
-                    logger.debug("Note: using cbdep.config from pwd")
-                    configfile = pwd_configfile
+        if yamlfile is not None:
+            # Load text of file
+            with open(yamlfile, 'r') as y:
+                return y.read()
 
-            yamlfile = str(configfile)
-
-
-        return yamlfile
+        return (importlib.resources.files(cbdep) / "cbdep.config").read_text()
 
     def do_install(self, args):
         """
@@ -103,7 +87,7 @@ class Cbdep:
         installdir = str(pathlib.Path(installdir).resolve())
 
         installer = Installer.fromYaml(
-            self.configpath(args),
+            self.loadconfig(args),
             self.cache,
             get_platforms(),
             "x86" if args.x32 else get_arches()
@@ -131,8 +115,7 @@ class Cbdep:
         List available packages
         """
 
-        with open(self.configpath(args)) as y:
-            config = yaml.safe_load(y)
+        config = yaml.safe_load(self.loadconfig(args))
         pkgs = list(config['packages'].keys()) \
             + config['cbdeps']['packages']
         print(
@@ -175,7 +158,7 @@ def main():
     parser.add_argument(
         "-V", "--version", action="version",
         help="Display cbdep version information",
-        version=f"cbdep version {__version__} (build {__build__})"
+        version=f"cbdep version {importlib.metadata.version(__package__)}"
     )
 
     subparsers = parser.add_subparsers()

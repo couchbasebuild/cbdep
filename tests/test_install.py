@@ -1,3 +1,4 @@
+import importlib
 import logging
 import os
 import sys
@@ -7,9 +8,10 @@ from hashlib import md5
 from pathlib import Path
 from shutil import rmtree
 sys.path.append('../scripts')
-from cache import Cache
-from install import Installer
-import platform_introspection as plat
+from cbdep.cache import Cache
+from cbdep.install import Installer
+import cbdep.platform_introspection as plat
+import cbdep
 
 wrong_platform_package = {
     "name": "java",
@@ -144,10 +146,10 @@ install_packages = [
         "final_file": "bin/uvx"
     }
 ]
-config = "../../cbdep.config"
 
-config = Path(config)
-wd = Path(tempfile.mkdtemp())
+yamltext = (importlib.resources.files(cbdep) / "cbdep.config").read_text()
+tempdir = tempfile.TemporaryDirectory()
+wd = Path(tempdir.name)
 logger = logging.getLogger()
 
 def clear_wd():
@@ -156,11 +158,11 @@ def clear_wd():
 class TestInstaller:
 
     def test_fromYaml(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         assert type(installer) == Installer
 
     def test___del__(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         tempdir = Path(installer.temp_dir)
         tempdir.mkdir(exist_ok=True)
         assert tempdir.exists()
@@ -168,25 +170,25 @@ class TestInstaller:
         assert tempdir.exists() == False
 
     def test_copy(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         assert type(installer.copy()) == Installer
 
     def test_set_cache_only(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         installer.set_cache_only(False)
         assert installer.cache_only == False
         installer.set_cache_only(True)
         assert installer.cache_only == True
 
     def test_recache(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         installer.set_recache(False)
         assert installer.recache == False
         installer.set_recache(True)
         assert installer.recache == True
 
     def test_set_from_local_file(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         Path("/tmp/bar").touch()
         installer.set_recache(True)
         installer.set_from_local_file("/tmp/bar")
@@ -197,12 +199,12 @@ class TestInstaller:
         assert e.value.code == 1
 
     def test_get_installer_file(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         installer.installer_file = "foo"
         assert installer.get_installer_file() == "foo"
 
     def test_templatize(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         installer.symbols["ALPHA"] = "ABC"
         installer.symbols["NUMERIC"] = "123"
         assert installer.templatize("${ALPHA}-${NUMERIC}") == "ABC-123"
@@ -216,7 +218,7 @@ class TestInstaller:
         caplog.set_level(logging.DEBUG)
         clear_wd()
         logger.info(f"Testing package '{package}'")
-        installer = Installer.fromYaml(config, Cache(wd), package["platform"], package.get("arch", plat.get_arches()))
+        installer = Installer.fromYaml(yamltext, Cache(wd), package["platform"], package.get("arch", plat.get_arches()))
         installer.install(package["name"], package["version"], package.get("base_url", ""), wd/"install")
         fn = wd / package["hash"][0:2] / package["hash"] / package.get("filename", f"{package['name']}-{package['version']}.tar.gz")
         logger.debug(f"    Checking for downloaded file '{fn}'")
@@ -234,7 +236,7 @@ class TestInstaller:
 
     def test_broken_install(self):
         clear_wd()
-        installer = Installer.fromYaml(config, Cache(wd), missing_package["platform"], "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), missing_package["platform"], "x86_64")
         with pytest.raises(SystemExit) as e:
                 installer.install(missing_package["name"], missing_package["version"], missing_package.get("base_url", ""), wd/"install")
         assert e.type == SystemExit
@@ -242,14 +244,14 @@ class TestInstaller:
 
     def test_wrong_platform_install(self):
         clear_wd()
-        installer = Installer.fromYaml(config, Cache(wd), wrong_platform_package["platform"], "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), wrong_platform_package["platform"], "x86_64")
         with pytest.raises(SystemExit) as e:
             installer.install(wrong_platform_package["name"], wrong_platform_package["version"], wrong_platform_package.get("base_url", ""), wd/"install")
         assert e.type == SystemExit
         assert e.value.code == 1
 
     def test_handle_set_env(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         installer.symbols["foo"] = "bar"
         os.environ["test_handle_set_env"] = ""
         installer.handle_set_env({ "test_handle_set_env": "xxx" })
@@ -258,7 +260,7 @@ class TestInstaller:
     def test_handle_fixed_dir(self):
         rmtree(wd, ignore_errors=True)
         wd.mkdir()
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         installer.symbols["foo"] = "bar"
         installer.handle_fixed_dir({ "fixed_dir": str(wd/"missing") })
         assert installer.handle_fixed_dir({ "fixed_dir": str(wd/"missing") }) == False
@@ -266,7 +268,7 @@ class TestInstaller:
         assert installer.handle_fixed_dir({ "fixed_dir": str(wd/"present") }) == True
 
     def test_do_install_dir(self):
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         action = {
             "install_dir": str(wd / "test_do_install_dir")
         }
@@ -276,7 +278,7 @@ class TestInstaller:
     def test_do_cbdep(self):
         rmtree(wd, ignore_errors=True)
         wd.mkdir()
-        assert config
-        installer = Installer.fromYaml(config, Cache(wd), "linux", "x86_64")
+        assert yamltext
+        installer = Installer.fromYaml(yamltext, Cache(wd), "linux", "x86_64")
         installer.do_cbdep({"cbdep": "analytics-jars", "version": "7.0.2-6512", "install_dir": str(wd/"test_do_cbdep")})
         assert md5(open(wd/"test_do_cbdep"/"analytics-jars-7.0.2-6512"/"cbas-install-7.0.2.jar", "rb").read()).hexdigest() == "3436fda4756c9aed996a6ad2ed9ddb30"
