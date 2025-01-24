@@ -5,7 +5,13 @@ export PATH=$PATH:$HOME/.local/bin
 
 CBDEP=~/.local/bin/cbdep
 
-# If cbdep isn't already installed, get uv and use it to install cbdep
+install_cbdep() {
+    # Use uv to install/upgrade cbdep
+    uv tool install --reinstall --quiet cbdep
+}
+
+# If cbdep isn't already installed, ensure uv is installed and then use
+# it to install cbdep
 if [ ! -x ${CBDEP} ]; then
 
     # If uv isn't already installed, install it - use curl or wget
@@ -20,14 +26,13 @@ if [ ! -x ${CBDEP} ]; then
         fi
     fi
 
-    # Use uv to install cbdep
-    uv tool install --python '>=3.10' --quiet cbdep
+    install_cbdep
 
 else
 
     # If cbdep is installed but more than a couple days old, update it
     if [[ $(find ${CBDEP} -mtime +2 -print) ]]; then
-        uv tool install --python '>=3.10' --reinstall --quiet cbdep
+        install_cbdep
     fi
 
 fi

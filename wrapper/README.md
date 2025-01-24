@@ -67,19 +67,6 @@ ways. Also, it turns out that after removing the `net/http` parts of the
 Go program, the resulting `cbdep.exe` is 1/3 the size, which is good
 since it will be downloaded from `packages.couchbase.com` repeatedly.
 
-## Python version workaround
-
-`uv tool install` [has a
-bug](https://github.com/astral-sh/uv/issues/10282) where if the
-system-installed Python is too old for `cbdep` (which requires at least
-Python 3.10), `uv` will fail with an error rather than downloading a
-new-enough Python. This doesn't always happen - on Ubuntu, for instance,
-it only happens if the system-provided Python has `pip` available (?).
-The workaround is to pass `--python '>=3.10'` to `uv tool install`, so I
-have done this in the shell script and Go program. When the `uv` bug is
-fixed, those arguments could be removed, although they're basically
-harmless if left.
-
 ## Releasing wrapper scripts
 
 I wrote `release-wrappers.sh` as a convenience to upload the wrapper

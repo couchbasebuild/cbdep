@@ -13,8 +13,7 @@ var cbdep = fmt.Sprintf("%s\\.local\\bin\\cbdep.exe", os.Getenv("USERPROFILE"))
 var uv = fmt.Sprintf("%s\\.local\\bin\\uv.exe", os.Getenv("USERPROFILE"))
 
 func installCbdep() {
-	cmd := exec.Command(uv,
-		"tool", "install", "--python", ">=3.10", "--reinstall", "cbdep")
+	cmd := exec.Command(uv, "tool", "install", "--reinstall", "cbdep")
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 
