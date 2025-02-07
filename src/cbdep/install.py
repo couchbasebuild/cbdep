@@ -7,6 +7,7 @@ import os
 import pathlib
 import re
 import shutil
+import stat
 import string
 import sys
 import tempfile
@@ -329,9 +330,10 @@ class Installer:
             if symbol == "PLATFORM":
                 if matched_value.startswith(("win", "pc-win")):
                     self.symbols['PLATFORM_EXT'] = "zip"
+                    self.symbols['PLATFORM_EXE_EXT'] = ".exe"
                 else:
                     self.symbols['PLATFORM_EXT'] = "tar.gz"
-
+                    self.symbols['PLATFORM_EXE_EXT'] = ""
             return True
 
         return False
@@ -429,6 +431,8 @@ class Installer:
                 self.do_install_dir(action)
             elif "unarchive" in action:
                 self.do_unarchive(action)
+            elif "raw_binary" in action:
+                self.do_raw_binary(action)
             elif "run" in action:
                 self.do_run(action)
             else:
@@ -518,7 +522,7 @@ class Installer:
                 self.cache.put(real_url, self.from_local_file)
 
             try:
-                localfile = str(self.cache.get(real_url, self.recache))
+                localfile = self.cache.get(real_url, self.recache)
                 break
             except Exception as e:
                 exception = e
@@ -533,7 +537,7 @@ class Installer:
                 # Try again just in case we've cached a bad HTML file
                 logger.debug(
                     "Error parsing HTML, trying to get a fresh copy..")
-                localfile = str(self.cache.get(real_url, True))
+                localfile = self.cache.get(real_url, True)
                 localfile = self.scrape_html(localfile, action["scrape_html"])
 
         # Remember the downloaded file
@@ -605,6 +609,55 @@ class Installer:
         # Finally as atomically as possible, move the existing
         # target directory out of the way (if it exists) and move
         # the contents directory to the target directory.
+        if target_dir.exists():
+            target_dir.rename(temp_dir / "recycle")
+        contents_dir.rename(target_dir)
+
+    def do_raw_binary(self, action):
+        """
+        Handles a `raw_binary` directive - a single binary download,
+        which we will place into a `bin` directory. By default, the
+        executable will be given the same name as the file created by
+        the download. If a different name is desired or the download URL
+        doesn't have a reasonable name, the target executable name can
+        be specified in the `name` field.
+        """
+
+        install_dir = pathlib.Path(self.installdir)
+        install_dir.mkdir(exist_ok=True, parents=True)
+
+        args = action["raw_binary"]
+        if args and "name" in args:
+            template = string.Template(args["name"])
+            bin_name = template.substitute(**self.symbols)
+        else:
+            bin_name = self.installer_file.name
+
+        # The standardized final location for the package. This may
+        # already exist! Note that we don't support a target_dir option
+        # here as it should be unnecessary.
+        target_dir_name = f"{self.package}-{self.version}"
+        target_dir = install_dir / target_dir_name
+        logger.info(f"Copying binary to {target_dir}/bin")
+
+        # Create a temporary directory
+        temp_dir_handle = tempfile.TemporaryDirectory(dir=install_dir)
+        temp_dir = pathlib.Path(temp_dir_handle.name)
+
+        # Create a `bin` directory in the temp dir and copy the binary,
+        # ensuring it's executable
+        contents_dir = temp_dir / 'contents'
+        bin_dir = contents_dir / 'bin'
+        logger.debug(f"Creating {bin_dir}")
+        bin_dir.mkdir(parents=True)
+        bin_file = bin_dir / bin_name
+        logger.debug(f"Copying {self.installer_file} to {bin_file}")
+        shutil.copy(self.installer_file, bin_file)
+        bin_file.chmod(bin_file.stat().st_mode | stat.S_IEXEC)
+
+        # As atomically as possible, move the existing target directory
+        # out of the way (if it exists) and move the new directory into
+        # place.
         if target_dir.exists():
             target_dir.rename(temp_dir / "recycle")
         contents_dir.rename(target_dir)

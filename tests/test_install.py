@@ -38,7 +38,7 @@ install_packages = [
         "version": "5.0.10",
         "arch": "x64",
         "filename": "dotnet-runtime-5.0.10-linux-x64.tar.gz",
-        "hash": "ccd32f9a26d3f3d019ed00b9d0887efc",
+        "hash": "7bb4e01127c7188bb6f4bfe201f1aa20",
         "final_file": "dotnet"
     },
     {
@@ -48,7 +48,7 @@ install_packages = [
         "version": "6.0.0",
         "arch": "x64-alpine",
         "filename": "dotnet-runtime-6.0.0-linux-musl-x64.tar.gz",
-        "hash": "e37e167862f9bbc5735a8087d33d48c8",
+        "hash": "745119ce18e8e0e73b3d44e000d23621",
         "final_file": "dotnet"
     },
     {
@@ -144,6 +144,15 @@ install_packages = [
         "filename": "uv-x86_64-unknown-linux-gnu.tar.gz",
         "hash": "3c08a4629ca3368f80e26a091a6f1496",
         "final_file": "bin/uvx"
+    },
+    {
+        # something with raw_binary
+        "name": "kubectl",
+        "platform": "linux",
+        "version": "1.31.0",
+        "filename": "kubectl",
+        "hash": "d2e1587ead4510060de349c9dc8b7861",
+        "final_file": "bin/kubectl"
     }
 ]
 
