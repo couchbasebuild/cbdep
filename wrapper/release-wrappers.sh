@@ -10,3 +10,4 @@ fi
 for win in cbdep-windows-x86_64.exe cbdep-windows.exe cbdep-windows_x86_64.exe cbdep.exe; do
     aws s3 cp --acl public-read cbdep-windows.exe s3://packages.couchbase.com/cbdep/$win
 done
+aws cloudfront create-invalidation --distribution-id E1U7LG5JV48KNP --paths '/cbdep/*'

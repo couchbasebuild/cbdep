@@ -7,7 +7,7 @@ CBDEP=~/.local/bin/cbdep
 
 install_cbdep() {
     # Use uv to install/upgrade cbdep
-    uv tool install --reinstall --quiet cbdep
+    uv tool install --python-preference=only-managed --reinstall --quiet cbdep
 }
 
 # If cbdep isn't already installed, ensure uv is installed and then use
