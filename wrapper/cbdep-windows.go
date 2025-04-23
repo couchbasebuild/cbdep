@@ -31,7 +31,7 @@ func main() {
 		// Check if uv exists
 		if _, err = os.Stat(uv); os.IsNotExist(err) {
 			cmd := exec.Command("powershell", "-ExecutionPolicy", "Bypass",
-				"-Command", "[Net.ServicePointManager]::SecurityProtocol = \"Tls12, Ssl3\"; irm https://astral.sh/uv/install.ps1 | iex")
+				"-Command", "[Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; irm https://astral.sh/uv/install.ps1 | iex")
 			cmd.Stdout = io.Discard
 			cmd.Stderr = io.Discard
 

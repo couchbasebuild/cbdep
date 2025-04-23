@@ -72,5 +72,5 @@ since it will be downloaded from `packages.couchbase.com` repeatedly.
 I wrote `release-wrappers.sh` as a convenience to upload the wrapper
 script/program to all the historical filenames on S3. Ideally, this
 should only need to be run once, as these same wrappers should work
-"forever". But, in case they need to be modified again (say if we want
-to remove the `--python '>=3.10'` args), we can re-run that script.
+"forever". But, in case they need to be modified again, we can re-run
+that script.
