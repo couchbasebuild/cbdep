@@ -26,7 +26,9 @@ cbdep_install_tests = [
     ["cmake", "3.24.3"],
     ["ninja", "1.11.1"],
     # check_one_package wix 3.11.2 windows # windows only
-    ["jq", "1.6"],
+    ["jq", "1.7"],
+    ["helm", "3.17.0"],
+    ["flux", "2.5.1"],
     ["prometheus", "2.40.1"],
     ["golang", "1.19.3"],
     ["dotnet-core-sdk", "7.0.100"],
