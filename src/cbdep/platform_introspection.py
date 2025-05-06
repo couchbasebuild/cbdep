@@ -104,9 +104,12 @@ def _alpine_mod(arches):
 
     if "alpine" not in get_platforms():
         return arches.copy()
+    # Ensure the -musl and -alpine variants appear first for all arches
+    # - we don't want, eg., a plain "x86_64" to be on the list before
+    # "x64-alpine"
     return [f"{arch}{suffix}"
-        for arch in arches
         for suffix in ["-musl", "-alpine", ""]
+        for arch in arches
     ]
 
 def get_arches():

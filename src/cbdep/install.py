@@ -309,16 +309,24 @@ class Installer:
         if if_directive not in block:
             return True
 
-        # Create case-insensitive map of if_directive values
         if_directive_values = block[if_directive]
         if not isinstance(if_directive_values, list):
             if_directive_values = [if_directive_values]
-        lc_directive_values = {x.casefold(): x for x in if_directive_values}
 
+        # Iterate through each directive value and see if the lowercase
+        # version of it exists in the list of system values. This logic
+        # ensure that cbdep.config authors may control the order that
+        # values are checked. In most cases this doesn't matter, but in
+        # some corner cases it may. In particular, on Alpine Linux, the
+        # system arch values will include eg. both `x64` and
+        # `x64-alpine`, where on non-Alpine Linux it would only include
+        # `x64`. cbdep.config authors should place the more-specific
+        # `x64-alpine` first in the `if_arch` directive to ensure the
+        # Alpine variant is matched when it exists.
         matched_value = None
-        for system_value in system_values:
-            if system_value in lc_directive_values:
-                matched_value = lc_directive_values[system_value]
+        for directive_value in if_directive_values:
+            if directive_value.casefold() in system_values:
+                matched_value = directive_value
                 break
 
         if matched_value is not None:

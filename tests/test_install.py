@@ -31,6 +31,8 @@ missing_package = {
 def package_name(package):
     return package.get("name")
 
+# The `platform` and `arch` values are used as the cbdep-provided values
+# for the environment cbdep is being run in.
 install_packages = [
     {
         "name": "dotnet-core-runtime",
@@ -46,10 +48,24 @@ install_packages = [
         "name": "dotnet-core-runtime",
         "platform": "linux",
         "version": "6.0.0",
-        "arch": "x64-alpine",
+        # This arch array is actually backwards compared to the version
+        # that would be introspected on Alpine Linux; we use this to
+        # test that the `if_arch` values are checked in the order
+        # specified by `cbdep.config`.
+        "arch": ["x64", "x64-alpine"],
         "filename": "dotnet-runtime-6.0.0-linux-musl-x64.tar.gz",
         "hash": "745119ce18e8e0e73b3d44e000d23621",
         "final_file": "dotnet"
+    },
+    {
+        # Another thing for Alpine
+        "name": "nodejs",
+        "platform": "linux",
+        "version": "16.20.2",
+        "arch": ["x64", "x64-musl"],
+        "filename": "node-v16.20.2-linux-x64-musl.tar.gz",
+        "hash": "90dc2aa03bd10272452e4eae11b82e66",
+        "final_file": "bin/node"
     },
     {
         "name": "golang",
