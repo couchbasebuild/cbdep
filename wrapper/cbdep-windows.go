@@ -1,8 +1,8 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"time"
@@ -14,11 +14,15 @@ var uv = fmt.Sprintf("%s\\.local\\bin\\uv.exe", os.Getenv("USERPROFILE"))
 
 func installCbdep() {
 	cmd := exec.Command(uv, "tool", "install", "--reinstall", "--python-preference=only-managed", "cbdep")
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	err := cmd.Run()
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error installing cbdep:\n")
+		fmt.Fprintf(os.Stderr, "Stdout: %s\n", stdout.String())
+		fmt.Fprintf(os.Stderr, "Stderr: %s\n", stderr.String())
 		panic(err)
 	}
 }
@@ -30,13 +34,21 @@ func main() {
 
 		// Check if uv exists
 		if _, err = os.Stat(uv); os.IsNotExist(err) {
+			// Need to unset PSMODULEPATH to ensure the right Powershell
+			// standard library is used.
+			// https://github.com/PowerShell/PowerShell/issues/18530#issuecomment-1325691850
+			os.Unsetenv("PSMODULEPATH")
 			cmd := exec.Command("powershell", "-ExecutionPolicy", "Bypass",
 				"-Command", "[Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; irm https://astral.sh/uv/install.ps1 | iex")
-			cmd.Stdout = io.Discard
-			cmd.Stderr = io.Discard
+			var stdout, stderr bytes.Buffer
+			cmd.Stdout = &stdout
+			cmd.Stderr = &stderr
 
 			err = cmd.Run()
 			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error installing uv:\n")
+				fmt.Fprintf(os.Stderr, "Stdout: %s\n", stdout.String())
+				fmt.Fprintf(os.Stderr, "Stderr: %s\n", stderr.String())
 				panic(err)
 			}
 		}
