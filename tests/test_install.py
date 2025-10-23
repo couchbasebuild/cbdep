@@ -71,10 +71,10 @@ install_packages = [
         "name": "golang",
         "platform": "linux",
         "arch": "amd64",
-        "version": "1.16.5",
-        "filename": "go1.16.5.linux-amd64.tar.gz",
-        "install_dir": "go1.16.5",
-        "hash": "76ff30daf15ef09e10a54be7b8a5f01b",
+        "version": "1.24.7",
+        "filename": "go1.24.7.linux-amd64.tar.gz",
+        "install_dir": "go1.24.7",
+        "hash": "fba8e1e6955bd708025e8db52b0f14ea",
         "final_file": "bin/go"
     },
     {
