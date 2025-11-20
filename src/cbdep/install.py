@@ -14,7 +14,7 @@ import tempfile
 import yaml
 
 from packaging.specifiers import SpecifierSet
-from subprocess import run
+from subprocess import run, CalledProcessError
 
 import cbdep.zipfile_with_permissions as zipfile_with_permissions
 from cbdep.platform_introspection import get_default_arches
@@ -694,7 +694,13 @@ class Installer:
 
         for command in command_string.splitlines():
             logger.debug(f"Running local command: {command}")
-            run(command, shell=True, check=True)
+            try:
+                run(command, shell=True, check=True)
+            except CalledProcessError as e:
+                # Command failed - error message should already be on stderr
+                # Exit cleanly without showing Python traceback
+                logger.error(f"Command failed with exit code {e.returncode}")
+                sys.exit(e.returncode)
 
     def templatize(self, template):
         """

@@ -35,9 +35,9 @@ include = [
     "uv.lock", ".python-version"
 ]
 
-[tool.uv]
-dev-dependencies = [
-    "flit>=3.2,<4",
+[dependency-groups]
+dev = [
+    "flit>=3.2.0,<4.0.0",
     "pytest>=7.2.0",
     "pre-commit>=2.20.0",
     "tox-uv>=1.11.3",
