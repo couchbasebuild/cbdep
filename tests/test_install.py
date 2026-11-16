@@ -78,6 +78,34 @@ install_packages = [
         "final_file": "bin/go"
     },
     {
+        "name": "golang",
+        "platform": "linux",
+        "arch": "s390x",
+        "version": "1.27.4",
+        "filename": "go1.27.4.linux-s390x.tar.gz",
+        "install_dir": "go1.27.4",
+        "hash": "034b20ec14a0e15c8d6250d90b6408e0",
+        "final_file": "bin/go"
+    },
+    {
+        "name": "nodejs",
+        "platform": "linux",
+        "arch": "s390x",
+        "version": "24.0.0",
+        "filename": "node-v24.0.0-linux-s390x.tar.gz",
+        "hash": "1dced0e53906b1fe9d1ec39bbe18e03b",
+        "final_file": "bin/node"
+    },
+    {
+        "name": "openjdk",
+        "platform": "linux",
+        "arch": "s390x",
+        "version": "25.0.5+8",
+        "filename": "OpenJDK25U-jdk_s390x_linux_hotspot_25.0.5_8.tar.gz",
+        "hash": "f8290afb1fe7656b650b406c5dcfabc6",
+        "final_file": "bin/java"
+    },
+    {
         # random cbdep
         "name": "analytics-jars",
         "base_url": "https://packages.couchbase.com/releases",
